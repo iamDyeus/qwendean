@@ -5,10 +5,10 @@ import re
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from langgraph_app.config import load_config
-from langgraph_app.llm_client import build_chat_model
-from langgraph_app.prompts.templates import SECTION_PLANNER_SYSTEM
-from langgraph_app.state import GraphState, SectionPlan
+from config import load_config
+from llm_client import build_chat_model
+from prompts.templates import SECTION_PLANNER_SYSTEM
+from state import GraphState, SectionPlan
 
 
 def _build_conversation_summary(state: GraphState) -> str:

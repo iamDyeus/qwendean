@@ -4,12 +4,12 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 
-from langgraph_app.nodes.intake import intake_node
-from langgraph_app.nodes.questionnaire import questionnaire_node
-from langgraph_app.nodes.section_planner import section_planner_node
-from langgraph_app.nodes.code_generator import code_generator_node
-from langgraph_app.nodes.page_assembler import page_assembler_node
-from langgraph_app.state import GraphState
+from nodes.intake import intake_node
+from nodes.questionnaire import questionnaire_node
+from nodes.section_planner import section_planner_node
+from nodes.code_generator import code_generator_node
+from nodes.page_assembler import page_assembler_node
+from state import GraphState
 
 
 def human_input_node(state: GraphState) -> dict:

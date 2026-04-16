@@ -5,10 +5,10 @@ import asyncio
 import httpx
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from langgraph_app.config import load_config
-from langgraph_app.llm_client import build_chat_model
-from langgraph_app.prompts.templates import CODE_GENERATION_SYSTEM
-from langgraph_app.state import GeneratedComponent, GraphState
+from config import load_config
+from llm_client import build_chat_model
+from prompts.templates import CODE_GENERATION_SYSTEM
+from state import GeneratedComponent, GraphState
 
 MAX_CONCURRENT = 3
 

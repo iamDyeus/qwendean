@@ -7,7 +7,7 @@ from typing import Any
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langchain_ollama import ChatOllama
 
-from langgraph_app.config import LLMConfig
+from config import LLMConfig
 
 
 def build_chat_model(config: LLMConfig, provider: str = "huggingface", **overrides: Any) -> Any:

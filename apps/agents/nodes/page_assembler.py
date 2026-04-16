@@ -2,8 +2,8 @@
 
 import re
 
-from langgraph_app.config import load_config
-from langgraph_app.state import GraphState
+from config import load_config
+from state import GraphState
 
 
 def _extract_component_name(code: str) -> str | None:

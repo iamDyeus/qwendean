@@ -1,6 +1,6 @@
 """Intake node: captures the initial user request."""
 
-from langgraph_app.state import GraphState
+from state import GraphState
 
 
 def intake_node(state: GraphState) -> dict:

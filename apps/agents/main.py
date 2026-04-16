@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langgraph.types import Command
 
-from langgraph_app.graph import build_graph
-from langgraph_app.state import GraphState
+from graph import build_graph
+from state import GraphState
 
 app = FastAPI(title="Qwendean API", version="0.1.0")
 
