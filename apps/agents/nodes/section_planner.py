@@ -21,7 +21,13 @@ def _build_conversation_summary(state: GraphState) -> str:
 
 def section_planner_node(state: GraphState) -> dict:
     config = load_config()
-    llm = build_chat_model(config.planner_llm, temperature=0.3)
+    llm = build_chat_model(
+        config.planner_llm,
+        provider=config.planner_provider,
+        base_url=config.ollama_base_url,
+        model=config.ollama_planner_model,
+        temperature=0.3
+    )
 
     conversation = _build_conversation_summary(state)
     user_prompt = (

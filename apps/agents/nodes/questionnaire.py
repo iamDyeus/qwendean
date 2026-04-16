@@ -12,7 +12,12 @@ COMPLETION_MARKER = "[QUESTIONNAIRE_COMPLETE]"
 
 def questionnaire_node(state: GraphState) -> dict:
     config = load_config()
-    llm = build_chat_model(config.planner_llm)
+    llm = build_chat_model(
+        config.planner_llm,
+        provider=config.planner_provider,
+        base_url=config.ollama_base_url,
+        model=config.ollama_planner_model
+    )
 
     lc_messages: list = [SystemMessage(content=QUESTIONNAIRE_SYSTEM)]
     for msg in state.get("messages", []):
