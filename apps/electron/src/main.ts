@@ -9,6 +9,9 @@ import { UpdateSourceType, updateElectronApp } from "update-electron-app";
 import { ipcContext } from "@/ipc/context";
 import { IPC_CHANNELS, inDevelopment } from "./constants";
 import { getBasePath } from "./utils/path";
+import { initDatabase, closeDatabase } from "./database/db";
+import { registerDatabaseHandlers } from "./ipc/database/handlers";
+import { registerPreviewHandlers } from "./ipc/preview/handlers";
 
 function createWindow() {
   const basePath = getBasePath();
@@ -70,6 +73,11 @@ async function setupORPC() {
 
 app.whenReady().then(async () => {
   try {
+    // Initialize database
+    initDatabase();
+    registerDatabaseHandlers();
+    registerPreviewHandlers();
+    
     createWindow();
     await installExtensions();
     checkForUpdates();
@@ -82,6 +90,7 @@ app.whenReady().then(async () => {
 //osX only
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
+    closeDatabase();
     app.quit();
   }
 });
@@ -90,5 +99,9 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+app.on("before-quit", () => {
+  closeDatabase();
 });
 //osX only ends

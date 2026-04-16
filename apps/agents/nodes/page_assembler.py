@@ -1,27 +1,52 @@
 """Page assembler node."""
 
 import re
+from pathlib import Path
 
 from config import load_config
 from state import GraphState
 
+# Toolkit builds directory (absolute path)
+TOOLKIT_BUILDS_DIR = Path(__file__).resolve().parents[3] / "toolkit" / "app" / "builds"
+
 
 def _extract_component_name(code: str) -> str | None:
+    # Try named export
     match = re.search(r'export\s*\{\s*(\w+)\s*\}', code)
     if match:
         return match.group(1)
+    
+    # Try export function
+    match = re.search(r'export\s+function\s+(\w+)', code)
+    if match:
+        return match.group(1)
+    
+    # Try export const with arrow function
+    match = re.search(r'export\s+const\s+(\w+)\s*=', code)
+    if match:
+        return match.group(1)
+    
+    # Try default export function
     match = re.search(r'export\s+default\s+function\s+(\w+)', code)
     if match:
         return match.group(1)
+    
+    # Try default export identifier
     match = re.search(r'export\s+default\s+(\w+)', code)
     if match:
         return match.group(1)
+    
     return None
 
 
 def page_assembler_node(state: GraphState) -> dict:
-    config = load_config()
-    output_dir = config.output_dir
+    # Get project_id from state (should be passed from API)
+    project_id = state.get("project_id")
+    if not project_id:
+        return {"error": "Missing project_id in state"}
+
+    # Save to toolkit/app/builds/{project_id}
+    output_dir = TOOLKIT_BUILDS_DIR / project_id
     components_dir = output_dir / "components"
     components_dir.mkdir(parents=True, exist_ok=True)
 
@@ -45,8 +70,20 @@ def page_assembler_node(state: GraphState) -> dict:
         if not actual_component_name:
             actual_component_name = component.component_name
 
+        # Ensure the component exports the expected name
+        code = component.code
+        if not re.search(rf'export\s+(const|function)\s+{re.escape(actual_component_name)}', code):
+            # If component uses default export, convert to named export
+            if 'export default' in code:
+                code = re.sub(
+                    r'export\s+default\s+',
+                    f'export const {actual_component_name} = ',
+                    code,
+                    count=1
+                )
+
         file_path = components_dir / f"{component.file_name}.tsx"
-        file_path.write_text(component.code, encoding="utf-8")
+        file_path.write_text(code, encoding="utf-8")
 
         import_lines.append(
             f'import {{ {actual_component_name} }} from "./components/{component.file_name}";'

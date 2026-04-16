@@ -17,7 +17,7 @@ export default function NavigationMenu() {
       <NavigationMenuList>
         <NavigationMenuItem>
           <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-            <Link to="/">{t("titleHomePage")}</Link>
+            <Link to="/apps">My Apps</Link>
           </NavigationMenuLink>
         </NavigationMenuItem>
         <NavigationMenuItem>

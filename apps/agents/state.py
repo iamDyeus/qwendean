@@ -27,14 +27,21 @@ class GeneratedComponent(BaseModel):
     code: str
 
 
+class Option(BaseModel):
+    id: str
+    label: str
+
+
 class ChatMessage(TypedDict):
     role: str
     content: str
 
 
 class GraphState(TypedDict, total=False):
+    project_id: str
     user_request: str
     messages: Annotated[list[ChatMessage], operator.add]
+    options: list[Option]
     industry: str
     questionnaire_complete: bool
     section_plan: SectionPlan | None

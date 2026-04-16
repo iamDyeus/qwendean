@@ -1,147 +1,217 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar, SidebarContent, SidebarFooter } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, Square } from 'lucide-react'
+import { landingPageApi, type Message, type Option } from '@/lib/api'
+import { PlanEditor } from './plan-editor'
 
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
+interface ChatSidebarProps {
+  projectId: string;
 }
 
-interface Option {
-  id: string
-  label: string
-  isCustomInput?: boolean
-}
-
-export function ChatSidebar() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! Which category interests you?',
-    },
-  ])
+export function ChatSidebar({ projectId }: ChatSidebarProps) {
+  const [sessionId] = useState(() => projectId)
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [options, setOptions] = useState<Option[]>([
-    { id: '1', label: 'Technology' },
-    { id: '2', label: 'Business' },
-    { id: '3', label: 'Health' },
-  ])
-  const [showCustomInput, setShowCustomInput] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [options, setOptions] = useState<Option[]>([])
+  const [hasStarted, setHasStarted] = useState(false)
+  const [sectionPlan, setSectionPlan] = useState<any>(null)
+  const [showPlanEditor, setShowPlanEditor] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
-  const handleSendMessage = async () => {
+  useEffect(() => {
+    loadConversationHistory()
+  }, [projectId])
+
+  const loadConversationHistory = async () => {
+    try {
+      const project = await window.database.getProject(projectId)
+      if (project?.conversation) {
+        const messages = JSON.parse(project.conversation)
+        if (messages.length > 0) {
+          setMessages(messages)
+          setHasStarted(true)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load history:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const saveConversation = async (messages: Message[]) => {
+    try {
+      await window.database.updateConversation(projectId, JSON.stringify(messages))
+    } catch (error) {
+      console.error('Failed to save conversation:', error)
+    }
+  }
+
+  const handleStartSession = async () => {
     if (!input.trim()) return
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input,
-    }
-
-    setMessages((prev) => [...prev, userMessage])
+    const userRequest = input
     setInput('')
     setIsLoading(true)
 
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `I received your message: "${input}". This is a simulated response.`,
+    try {
+      const response = await landingPageApi.startSession(userRequest, sessionId, projectId)
+      setMessages(response.messages)
+      setOptions(response.options)
+      setHasStarted(true)
+      
+      await saveConversation(response.messages)
+      
+      if (response.section_plan) {
+        setSectionPlan(response.section_plan)
+        setShowPlanEditor(true)
       }
-      setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      console.error('Failed to start session:', error)
+      setMessages([
+        {
+          role: 'assistant',
+          content: 'Sorry, there was an error connecting to the server. Please try again.',
+        },
+      ])
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
+  }
+
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim() || isLoading) return
+
+    const userMessage: Message = { role: 'user', content: message }
+    setMessages((prev) => [...prev, userMessage])
+    setOptions([])
+    setIsLoading(true)
+
+    try {
+      const response = await landingPageApi.resumeSession(sessionId, message)
+      const newMessages = [...prev, ...response.messages.filter(m => m.role === 'assistant')]
+      setMessages(newMessages)
+      setOptions(response.options)
+      
+      await saveConversation(newMessages)
+      
+      if (response.section_plan) {
+        setSectionPlan(response.section_plan)
+        setShowPlanEditor(true)
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Sorry, there was an error. Please try again.',
+        },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleApprovePlan = async (updatedPlan: any) => {
+    setIsGenerating(true)
+    setShowPlanEditor(false)
+
+    try {
+      // Update plan if edited
+      if (JSON.stringify(updatedPlan) !== JSON.stringify(sectionPlan)) {
+        await landingPageApi.updatePlan(sessionId, updatedPlan)
+        setSectionPlan(updatedPlan)
+      }
+
+      // Approve and generate
+      const response = await landingPageApi.approvePlan(sessionId)
+      
+      if (response.preview_components && response.preview_components.length > 0) {
+        const successMessage = {
+          role: 'assistant' as const,
+          content: `✅ Generated ${response.preview_components.length} components successfully!`,
+        }
+        const updatedMessages = [...prev, successMessage]
+        setMessages(updatedMessages)
+        await saveConversation(updatedMessages)
+      }
+    } catch (error) {
+      console.error('Failed to approve plan:', error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Sorry, there was an error generating code. Please try again.',
+        },
+      ])
+    } finally {
+      setIsGenerating(false)
+    }
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSendMessage()
+      if (isLoading || isGenerating) return
+      
+      if (!hasStarted) {
+        handleStartSession()
+      } else if (input.trim()) {
+        handleSendMessage(input)
+        setInput('')
+      }
     }
   }
 
   const handleOptionSelect = (option: Option) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: option.label,
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setOptions([])
-    setIsLoading(true)
-
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `You selected: "${option.label}". Processing your choice...`,
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 500)
-  }
-
-  const handleShowCustomInput = () => {
-    setShowCustomInput(true)
-    setOptions([])
+    if (isLoading || isGenerating) return
+    handleSendMessage(option.label)
   }
 
   const handleCustomInputSubmit = () => {
-    if (!input.trim()) return
-
-    const customText = input
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: customText,
-    }
-
-    setMessages((prev) => [...prev, userMessage])
+    if (!input.trim() || isLoading || isGenerating) return
+    handleSendMessage(input)
     setInput('')
-    setShowCustomInput(false)
-    setOptions([])
-    setIsLoading(true)
-
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `You entered: "${customText}". Processing your input...`,
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-      setIsLoading(false)
-    }, 500)
   }
 
   return (
     <Sidebar variant="inset" className="mt-21">
-      <SidebarContent className="flex flex-col ">
+      <SidebarContent className="flex flex-col">
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full w-full">
             <div className="flex flex-col gap-4 p-4">
-              {messages.map((message) => (
+              {messages.map((message, idx) => (
                 <div
-                  key={message.id}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                  key={idx}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs rounded-lg px-3 py-2 text-sm ${message.role === 'user'
+                    className={`max-w-xs rounded-lg px-3 py-2 text-sm ${
+                      message.role === 'user'
                         ? 'bg-primary text-primary-foreground'
                         : 'bg-secondary text-secondary-foreground'
-                      }`}
+                    }`}
                   >
                     {message.content}
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              
+              {showPlanEditor && sectionPlan && (
+                <div className="w-full">
+                  <PlanEditor
+                    plan={sectionPlan}
+                    onApprove={handleApprovePlan}
+                    isGenerating={isGenerating}
+                  />
+                </div>
+              )}
+              
+              {(isLoading || isGenerating) && (
                 <div className="flex justify-start">
                   <div className="rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground">
                     <span className="inline-block h-2 w-2 rounded-full bg-current animate-bounce"></span>
@@ -157,7 +227,7 @@ export function ChatSidebar() {
 
       <SidebarFooter className="mr-0 pr-0 mb-19">
         <div className="flex flex-col gap-2 rounded-lg bg-zinc-900 p-4 border border-zinc-800">
-          {options.length > 0 && (
+          {options.length > 0 && !showPlanEditor && (
             <>
               <div className="text-xs text-zinc-400 mb-2">Select an option:</div>
               <div className="flex flex-col gap-2 mb-2">
@@ -165,7 +235,7 @@ export function ChatSidebar() {
                   <Button
                     key={option.id}
                     onClick={() => handleOptionSelect(option)}
-                    disabled={isLoading}
+                    disabled={isLoading || isGenerating}
                     variant="outline"
                     className="justify-start text-sm h-auto py-2 px-3 border-zinc-700 text-white hover:bg-zinc-800"
                   >
@@ -177,36 +247,46 @@ export function ChatSidebar() {
             </>
           )}
           
-          <textarea
-            placeholder="Enter your custom answer..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                if (options.length > 0) {
-                  handleCustomInputSubmit()
-                } else {
-                  handleSendMessage()
+          {!showPlanEditor && (
+            <>
+              <textarea
+                placeholder={
+                  !hasStarted
+                    ? "Describe your landing page idea..."
+                    : "Enter your custom answer..."
                 }
-              }
-            }}
-            disabled={isLoading}
-            className="flex-1 min-h-12 w-full resize-none rounded bg-transparent border-0 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus-visible:ring-0"
-          />
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyPress={handleKeyPress}
+                disabled={isLoading || isGenerating}
+                className="flex-1 min-h-12 w-full resize-none rounded bg-transparent border-0 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus-visible:ring-0"
+              />
 
-          <div className="flex justify-end">
-            <Button
-              size="icon"
-              onClick={
-                options.length > 0 ? handleCustomInputSubmit : handleSendMessage
-              }
-              disabled={isLoading || !input.trim()}
-              className="h-8 w-8 shrink-0 bg-zinc-100 text-zinc-900 hover:bg-white disabled:opacity-50"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </Button>
-          </div>
+              <div className="flex justify-end">
+                <Button
+                  size="icon"
+                  onClick={
+                    !hasStarted
+                      ? handleStartSession
+                      : options.length > 0
+                      ? handleCustomInputSubmit
+                      : () => {
+                          handleSendMessage(input)
+                          setInput('')
+                        }
+                  }
+                  disabled={(isLoading || isGenerating) ? false : !input.trim()}
+                  className="h-8 w-8 shrink-0 bg-zinc-100 text-zinc-900 hover:bg-white disabled:opacity-50"
+                >
+                  {isLoading || isGenerating ? (
+                    <Square className="h-4 w-4" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>

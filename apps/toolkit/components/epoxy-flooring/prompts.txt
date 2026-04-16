@@ -1,0 +1,296 @@
+# Landing Page Breakdown: Industrial Epoxy Flooring
+
+## Page Structure
+
+**Nav → Hero → Social Proof Bar → Problem/Pain → Solution/Features → How It Works → Project Gallery CTA → Testimonials → FAQ → Contact → Footer**
+
+---
+
+## Section Breakdown + Generation Prompts
+
+---
+
+### 1. NAV
+
+**Purpose:** Anchor links to sections, phone number visible, sticky on scroll. B2G buyers want to call, not fill forms.
+
+```
+Create a Navbar React component for an industrial flooring B2G/commercial website.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Logo: "FloorTech Industrial" with a small shield or layers icon (lucide) to the left
+- Nav links: Solutions, Projects, How It Works, FAQ, Contact (smooth scroll anchor links)
+- Right side: Phone number prominently displayed as a clickable tel: link — "Call for a Site Quote: +91-XXXXXXXXXX" with a Phone icon
+- Sticky CTA button: "Request a Quote" (outlined style, converts to filled on scroll)
+
+Layout: Mobile → hamburger sheet menu (ShadCN Sheet component) | Desktop → horizontal single-bar nav
+Style: Dark navy (#0f172a) background, white text, amber/yellow accent (#f59e0b) for CTA and phone icon, sharp industrial feel
+On scroll: add subtle border-bottom and slight backdrop blur
+Export the component as: export { Navbar }
+```
+
+---
+
+### 2. HERO
+
+**Purpose:** Single value prop. Visitors land here from tenders, referrals, Google. Lead with outcome, not product name.
+
+```
+Create a Hero React component for an industrial epoxy flooring website targeting B2G and commercial procurement teams.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Eyebrow label: small badge/chip — "Approved for Government & Commercial Projects"
+- Headline (H1): "Anti-Skid Epoxy Flooring That Passes Every Safety Inspection — First Time"
+- Subheadline: "We coat bus depots, warehouses, and food storage facilities with certified, heavy-duty epoxy floors built for daily punishment and decades of use."
+- Primary CTA button: "Get a Free Site Assessment" (amber/yellow, large)
+- Secondary CTA: "See Our Projects →" (ghost button)
+- Trust micro-copy below CTAs: 3 inline icon+text pills — "IS 15477 Certified", "500+ Facilities Coated", "Pan-India Projects"
+- Right side / background: Full bleed image placeholder (a dark warehouse or depot floor, industrial)
+
+Layout: Mobile → stacked, image below text | Desktop → 60/40 split left text, right image with slight overlay
+Style: Dark navy background left panel, industrial grit mood, amber accents, no gradients — flat and confident. Bold heavy font for H1 (font-bold text-4xl md:text-6xl)
+Export the component as: export { Hero }
+```
+
+---
+
+### 3. SOCIAL PROOF BAR
+
+**Purpose:** Instant credibility. Government buyers are risk-averse. Logos + numbers kill hesitation fast.
+
+```
+Create a SocialProofBar React component for an industrial flooring company serving government and commercial clients.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Left label: "Trusted by" in muted text
+- Client logo placeholders: 5–6 logos in a horizontal strip (use placeholder gray boxes with org-type labels: "State Transport Corp.", "FSSAI-Reg. Cold Storage", "Municipal Warehouse Authority", "Large Format Retail Chain") — these are placeholder slots with a subtle grayscale filter
+- Right stat cluster: 3 stats separated by vertical dividers: "500+ Projects", "18 States", "Zero Compliance Failures"
+
+Layout: Mobile → stats only (logos hidden) | Desktop → full horizontal bar with logos + stats
+Style: Light gray (#f8fafc) background strip, subtle top/bottom border, muted and professional. No color noise — let the numbers speak.
+Export the component as: export { SocialProofBar }
+```
+
+---
+
+### 4. PROBLEM / PAIN
+
+**Purpose:** Show you understand their world before pitching anything. Procurement managers and facility heads have real nightmares.
+
+```
+Create a PainSection React component for an industrial epoxy flooring website targeting facility managers and government procurement officers.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Section headline: "Standard Flooring Fails Industrial Facilities. Fast."
+- Section subtext: "Slippery surfaces after wet mopping. Floors that crack under forklift loads. Coatings that peel within a year and trigger compliance failures. Sound familiar?"
+- 3 pain point cards, each with: a lucide icon (AlertTriangle, ZapOff, ClipboardX), a short bold title, and 2 sentences of specific description:
+    Card 1 — Icon: AlertTriangle | Title: "Slip Incidents Become Liability Claims" | Body: "Smooth concrete in bus depots and loading docks turns into a lawsuit waiting to happen. Standard paint offers zero grip under oil, water, or dust."
+    Card 2 — Icon: ZapOff | Title: "Floors That Can't Take the Load" | Body: "Forklifts, heavy trolleys, and daily foot traffic destroy ordinary coatings within months. You end up recoating every season."
+    Card 3 — Icon: ClipboardX | Title: "Failed FSSAI and Safety Audits" | Body: "Food storage facilities need hygienic, seamless, chemical-resistant floors. Cracked or porous flooring is a compliance violation waiting to happen."
+- Transition line at bottom: "There's a better way to floor a serious facility." in italic muted text
+
+Layout: Mobile → stacked cards | Desktop → 3-column grid
+Style: Off-white or very light warm gray background, dark card borders, pain-focused red-ish icon tint (red-500), sharp corners — not soft or friendly. This section should feel like a diagnosis.
+Export the component as: export { PainSection }
+```
+
+---
+
+### 5. SOLUTION / FEATURES
+
+**Purpose:** Connect product capabilities to buyer outcomes. No jargon. Each feature earns its place by explaining what it means for the facility.
+
+```
+Create a FeaturesSection React component for an anti-skid industrial epoxy flooring company.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Section eyebrow: "What Makes It Different"
+- Section headline: "Engineered for the Floors Government Facilities Actually Use"
+- 6 feature cards arranged in a grid, each with: lucide icon, bold feature name, and 2-sentence benefit-driven description:
+    1. Icon: ShieldCheck | "Anti-Skid Surface Texture" | "Micro-aggregate finish delivers R11–R13 slip resistance. Safe underfoot even when wet, oily, or dusty — no rubber mats needed."
+    2. Icon: Layers | "Up to 6mm Thick System" | "Multi-layer build absorbs impact from heavy machinery and loaded trolleys. No cracks, no delamination — even under daily forklift traffic."
+    3. Icon: Droplets | "Chemical & Moisture Resistant" | "Sealed seamless surface repels oils, cleaning agents, and standing water. Critical for food storage, kitchens, and wet processing areas."
+    4. Icon: Thermometer | "Temperature Stable Coating" | "Remains stable from cold storage (-10°C) to industrial heat zones. No expansion cracking across seasonal temperature swings."
+    5. Icon: BadgeCheck | "IS 15477 & FSSAI Compliant" | "Coatings meet national standards for safety and food-grade hygiene. Audit-ready documentation provided with every project."
+    6. Icon: Clock | "Fast Cure. Minimal Downtime." | "Most systems cure in 24–48 hours. We schedule around your operations so your facility isn't idle for weeks."
+
+Layout: Mobile → single column | Tablet → 2-col | Desktop → 3-col grid
+Style: White background, navy card headers, amber icon accent, subtle card shadow on hover with slight lift (hover:shadow-lg hover:-translate-y-1 transition). Clean and technical — this is a spec sheet, not a brochure.
+Export the component as: export { FeaturesSection }
+```
+
+---
+
+### 6. HOW IT WORKS
+
+**Purpose:** Reduce perceived complexity. Government and commercial buyers want to know what the engagement looks like before they call.
+
+```
+Create a HowItWorksSection React component for an industrial flooring company.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Section headline: "From Site Visit to Certified Floor — Here's How It Works"
+- 4 numbered process steps, each with: large step number, bold step title, and 2-sentence explanation:
+    Step 1 — "Free Site Assessment" — "We visit your facility, measure the space, assess existing floor condition, and understand load and usage patterns. No cost, no obligation."
+    Step 2 — "Specification & Quote" — "You receive a written scope of work with material specs, IS standards references, timeline, and fixed pricing. No surprises mid-project."
+    Step 3 — "Surface Prep & Application" — "Our certified crew grinds, primes, and applies the epoxy system in controlled layers. Work is scheduled to minimize facility downtime."
+    Step 4 — "Handover & Documentation" — "You get a completed floor, a compliance certificate, warranty documentation, and maintenance guidelines ready for your audit file."
+- CTA below steps: "Book Your Site Assessment" (amber button)
+
+Layout: Mobile → vertical stacked steps with connecting line | Desktop → horizontal 4-step stepper with numbered connectors
+Style: Light gray background, large navy step numbers (text-7xl opacity-10 behind icon), amber connecting line/dots, clean and process-driven feel
+Export the component as: export { HowItWorksSection }
+```
+
+---
+
+### 7. PROJECT SHOWCASE / GALLERY CTA
+
+**Purpose:** Show, don't tell. Real project types build confidence for procurement teams evaluating similar facilities.
+
+```
+Create a ProjectShowcaseSection React component for an industrial epoxy flooring company.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Section headline: "Floors We've Delivered"
+- 4 project type cards, each showing: image placeholder (dark industrial photo), facility type tag (e.g. "Bus Depot"), location label (e.g. "Mumbai, Maharashtra"), a 1-line outcome stat (e.g. "8,400 sq ft — Anti-Skid R12 System"):
+    Card 1: Bus Depot | "State Transport Authority, Pune" | "12,000 sq ft, Anti-Skid Heavy-Duty System"
+    Card 2: Cold Storage | "FSSAI-Registered Food Warehouse, Delhi NCR" | "6,200 sq ft, Chemical-Resistant Seamless Coat"
+    Card 3: Warehouse | "Logistics Hub, Bhiwandi" | "22,000 sq ft, Forklift-Grade Epoxy System"
+    Card 4: Municipal Facility | "Civic Works Department, Ahmedabad" | "4,800 sq ft, Safety-Line Marked Anti-Skid Floor"
+- CTA below grid: "Discuss a Similar Project" (outlined navy button)
+
+Layout: Mobile → 1-col | Tablet → 2-col | Desktop → 4-col grid, image top, details below
+Style: Dark card background with image overlay gradient on bottom, white text on cards, hover: slight scale(1.02) on card image. Confident, portfolio-style.
+Export the component as: export { ProjectShowcaseSection }
+```
+
+---
+
+### 8. TESTIMONIALS
+
+**Purpose:** Voice-of-customer that speaks directly to procurement/facility management fears. Specific, named, titled.
+
+```
+Create a TestimonialsSection React component for a B2G industrial flooring company.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Section headline: "What Facility Managers Say After Handover"
+- 3 testimonial cards, each with: quote text, person name, title, and organization type:
+    1. "We had two slip incidents in the depot in the year before. After their anti-skid system, we've had zero — and we passed the safety audit without a single observation." — R. Patil, Depot Manager, State Transport Corp.
+    2. "They came in, assessed the floor, gave us a written spec with IS references, and stuck to the timeline. The FSSAI auditor specifically noted the floor quality." — Anita Sharma, Operations Head, Cold Chain Facility
+    3. "Most contractors quote cheap and then upcharge on prep work. These guys gave us a fixed price and delivered a forklift-grade floor under budget." — V. Menon, Procurement Officer, Logistics Company
+- Each card: 5-star rating display, large quote mark as visual accent
+
+Layout: Mobile → stacked | Desktop → 3-column grid
+Style: Navy background section, white card with subtle shadow, amber star icons, large italic quote mark in amber (opacity-20) as background decoration. Formal and credible — not bubbly.
+Export the component as: export { TestimonialsSection }
+```
+
+---
+
+### 9. FAQ
+
+**Purpose:** Handle objections without a sales call. B2G procurement has specific questions around compliance, timelines, and documentation.
+
+```
+Create a FAQSection React component for an industrial epoxy flooring company targeting government and commercial procurement.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons (use ShadCN Accordion component).
+
+Content to include:
+- Section headline: "Questions Procurement Teams Usually Ask"
+- 7 FAQ items using ShadCN Accordion, with specific Q&A content:
+    Q1: "Do your floors meet IS 15477 and FSSAI standards?" — A: "Yes. Our epoxy systems are specified to meet IS 15477 for industrial flooring and are compliant with FSSAI hygiene requirements for food-grade facilities. Compliance documentation is provided at handover."
+    Q2: "How long does installation take for a large facility?" — A: "For facilities up to 10,000 sq ft, installation typically takes 3–5 working days with 24–48 hour cure time. Larger projects are phased to keep sections of your facility operational."
+    Q3: "Can you work around our operating schedule?" — A: "Yes. We regularly execute night shifts and weekend work for facilities that can't afford daytime shutdowns — depots, warehouses, and food units especially."
+    Q4: "What surface preparation do you do before applying epoxy?" — A: "We mechanically grind or shot-blast the existing surface to open the concrete profile, repair cracks, and ensure bond strength. This step is non-negotiable for a durable coat."
+    Q5: "Do you provide warranty documentation suitable for audit files?" — A: "Yes. Every project includes a written warranty, material test certificates, and application records formatted for compliance audit submission."
+    Q6: "What is the minimum order or project size you work on?" — A: "We work on projects from 1,000 sq ft upward. For government tenders, we can provide all required documentation including GST invoices, PAN, and experience certificates."
+    Q7: "How do we get a quote for a government tender project?" — A: "Call us or submit the contact form with your facility type and approximate area. We'll schedule a site visit and provide a written quotation with full specifications within 3 working days."
+
+Layout: Single column accordion, full width, max-w-3xl centered
+Style: Clean white background, subtle border on accordion items, amber chevron icon on expand, professional and document-like — not glossy
+Export the component as: export { FAQSection }
+```
+
+---
+
+### 10. CONTACT / QUOTE REQUEST
+
+**Purpose:** Final conversion. Make it easy to call OR fill a form. B2G buyers often want to talk first.
+
+```
+Create a ContactSection React component for an industrial flooring B2G website.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Section headline: "Get a Site Assessment for Your Facility"
+- Section subtext: "Tell us your facility type and location. We'll come to you, assess the floor, and give you a written quote — no cost, no obligation."
+- Left panel — Contact form with ShadCN form fields:
+    - Name (text input)
+    - Organization / Company Name (text input)
+    - Facility Type (Select: Bus Depot, Warehouse, Cold Storage, Food Facility, Municipal Building, Other)
+    - Approximate Area in sq ft (number input)
+    - City / State (text input)
+    - Phone Number (tel input, required)
+    - Message / Additional Details (textarea, optional)
+    - Submit button: "Request Free Site Assessment" (full-width amber)
+- Right panel — Direct contact info:
+    - Phone (with Phone icon): clickable number, labeled "Call directly for urgent projects"
+    - Email (with Mail icon)
+    - Working hours: "Mon–Sat, 9am–7pm"
+    - Small trust line: "We respond within 1 business day. Fixed-price quotes. No pushy follow-ups."
+
+Layout: Mobile → form stacked | Desktop → 60/40 split (form left, contact info right)
+Style: Dark navy background, white form fields with subtle contrast, amber submit button, right panel in slightly lighter navy shade. Serious and frictionless.
+Export the component as: export { ContactSection }
+```
+
+---
+
+### 11. FOOTER
+
+**Purpose:** Navigation fallback, legal, and trust signals for procurement teams who scroll to the bottom.
+
+```
+Create a Footer React component for an industrial epoxy flooring company.
+
+Tech: Typescript, TailwindCSS, ShadCN UI, lucide-react icons.
+
+Content to include:
+- Logo + 1-line company descriptor: "FloorTech Industrial — Anti-Skid Epoxy Flooring for Public and Commercial Facilities"
+- 3 footer link columns:
+    Col 1 "Solutions": Anti-Skid Flooring, Heavy-Duty Epoxy, Food-Grade Coatings, Safety Line Marking
+    Col 2 "Facilities": Bus Depots, Warehouses, Cold Storage, Municipal Buildings
+    Col 3 "Company": About Us, Projects, FAQ, Contact
+- Bottom bar: GST No. XXXXXXXXXXXX | © 2024 FloorTech Industrial | Privacy Policy
+- Trust icons row: IS 15477 badge placeholder, FSSAI Compliant badge placeholder, "Pan-India Projects" with MapPin icon
+
+Layout: Mobile → stacked single column | Desktop → 4-col (logo+desc | col1 | col2 | col3), bottom bar full width
+Style: Dark navy (#0f172a), muted gray link text, amber hover on links, clean divider before bottom bar. Functional, not decorative.
+Export the component as: export { Footer }
+```
+
+---
+
+## Build Order Recommendation
+
+Start with **Navbar → Hero → SocialProofBar** first — that's your above-the-fold, and it'll set the visual tone for every section below. Then build **PainSection → FeaturesSection → HowItWorks** as the logical argument core. Close with **FAQ → Contact → Footer**.

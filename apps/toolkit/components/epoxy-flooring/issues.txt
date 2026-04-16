@@ -1,0 +1,12 @@
+in nav:
+- syntax broke somewhere at navigation menu
+- it used "useEffect" or "useState" but didn't imported it
+- was using useState; but it didn't had "use client";
+- it had w-screen but for my responsiveness it needed to be `w-full`
+- the dropdown isn't working correctly, it is only droping down at the first location, where as it should've came down at the correct position
+- when nav is scrolled, it went to out of viewport
+- note when I tried giving the entire component to the model to fix it then it gave an ouput truncating all previous things.
+
+in hero:
+- it generated default "dark" this is not error but a antipattern.
+- the tick marks aren't complete
