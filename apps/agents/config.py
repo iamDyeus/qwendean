@@ -19,6 +19,9 @@ class LLMConfig:
     model: str
     api_key: str
     temperature: float = 0.7
+    top_p: float | None = None
+    top_k: int | None = None
+    min_p: float | None = None
     max_tokens: int = 4096
 
 
@@ -27,14 +30,19 @@ class AppConfig:
     planner_llm: LLMConfig = field(default_factory=lambda: LLMConfig(
         model=os.getenv("PLANNER_MODEL", "meta-llama/Llama-3.1-8B-Instruct"),
         api_key=os.getenv("HUGGINGFACE_API_KEY", ""),
-        temperature=float(os.getenv("PLANNER_TEMPERATURE", "0.7")),
+        temperature=float(os.getenv("PLANNER_TEMPERATURE", "1.0")),
+        top_p=float(os.getenv("PLANNER_TOP_P", "0.95")),
+        top_k=int(os.getenv("PLANNER_TOP_K", "64")),
         max_tokens=int(os.getenv("PLANNER_MAX_TOKENS", "4096")),
     ))
 
     generator_llm: LLMConfig = field(default_factory=lambda: LLMConfig(
         model=os.getenv("GENERATOR_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct"),
         api_key=os.getenv("HUGGINGFACE_API_KEY", ""),
-        temperature=float(os.getenv("GENERATOR_TEMPERATURE", "0.6")),
+        temperature=float(os.getenv("GENERATOR_TEMPERATURE", "0.7")),
+        top_p=float(os.getenv("GENERATOR_TOP_P", "0.8")),
+        top_k=int(os.getenv("GENERATOR_TOP_K", "20")),
+        min_p=float(os.getenv("GENERATOR_MIN_P", "0.0")),
         max_tokens=int(os.getenv("GENERATOR_MAX_TOKENS", "8192")),
     ))
 

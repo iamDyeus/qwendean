@@ -31,22 +31,30 @@ async def _generate_one_ollama(
     section_name: str,
     file_name: str,
     temperature: float,
+    top_p: float | None,
+    top_k: int | None,
+    min_p: float | None,
     max_tokens: int,
     semaphore: asyncio.Semaphore,
 ) -> GeneratedComponent:
     async with semaphore:
+        options: dict[str, object] = {
+            "temperature": temperature,
+            "num_predict": max_tokens,
+            "repeat_penalty": 1.0,
+        }
+        if top_p is not None:
+            options["top_p"] = top_p
+        if top_k is not None:
+            options["top_k"] = top_k
+        if min_p is not None:
+            options["min_p"] = min_p
+
         payload = {
             "model": model,
             "prompt": section_prompt,
             "stream": False,
-            "options": {
-                "temperature": temperature,
-                "num_predict": max_tokens,
-                "top_p": 0.95,
-                "top_k": 20,
-                "min_p": 0.1,
-                "repeat_penalty": 1.0,
-            }
+            "options": options,
         }
         async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(f"{base_url}/api/generate", json=payload)
@@ -104,6 +112,9 @@ async def _generate_all(state: GraphState) -> list[GeneratedComponent]:
                 section_name=section.section_name,
                 file_name=section.file_name,
                 temperature=config.generator_llm.temperature,
+                top_p=config.generator_llm.top_p,
+                top_k=config.generator_llm.top_k,
+                min_p=config.generator_llm.min_p,
                 max_tokens=config.generator_llm.max_tokens,
                 semaphore=semaphore,
             )

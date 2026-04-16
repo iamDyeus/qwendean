@@ -31,7 +31,7 @@ def _parse_options(text: str) -> tuple[str, list[Option]]:
             # Remove leading dash/bullet
             label = re.sub(r'^[-•*]\s*', '', line).strip()
             if label:
-                options.append(Option(id=str(idx + 1), label=label))
+                options.append({"id": str(idx + 1), "label": label})
     
     return question_text, options
 
@@ -60,6 +60,13 @@ def questionnaire_node(state: GraphState) -> dict:
     
     # Parse options from response
     question_text, options = _parse_options(clean_text)
+
+    # Only mark complete if the model didn't also ask a question
+    if is_complete and (question_text or options):
+        is_complete = False
+
+    if is_complete and not question_text:
+        question_text = "Thanks! Preparing the plan."
 
     return {
         "messages": [{"role": "assistant", "content": question_text}],

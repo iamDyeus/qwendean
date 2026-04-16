@@ -27,7 +27,7 @@ class GeneratedComponent(BaseModel):
     code: str
 
 
-class Option(BaseModel):
+class Option(TypedDict):
     id: str
     label: str
 

@@ -1,13 +1,12 @@
 """Page assembler node."""
 
 import re
-from pathlib import Path
 
 from config import load_config
 from state import GraphState
 
 # Toolkit builds directory (absolute path)
-TOOLKIT_BUILDS_DIR = Path(__file__).resolve().parents[3] / "toolkit" / "app" / "builds"
+CONFIG = load_config()
 
 
 def _extract_component_name(code: str) -> str | None:
@@ -39,14 +38,49 @@ def _extract_component_name(code: str) -> str | None:
     return None
 
 
+def _extract_fenced_tsx(code: str) -> str:
+    code = code.strip()
+    if not code:
+        return code
+
+    fenced_langs = ["tsx", "ts", "jsx", "js"]
+    for lang in fenced_langs:
+        match = re.search(rf"```{lang}\s+([\s\S]*?)```", code, re.IGNORECASE)
+        if match:
+            return match.group(1).strip()
+
+    # Fallback: first fenced block of any language
+    match = re.search(r"```[a-zA-Z0-9_-]*\s+([\s\S]*?)```", code)
+    if match:
+        return match.group(1).strip()
+
+    return code
+
+
+def _ensure_named_export(code: str, component_name: str) -> str:
+    named_export_pattern = rf"export\s+(const|function|class)\s+{re.escape(component_name)}\b"
+    export_list_pattern = rf"export\s*\{{[^}}]*\b{re.escape(component_name)}\b[^}}]*\}}"
+
+    if re.search(named_export_pattern, code) or re.search(export_list_pattern, code):
+        return code
+
+    if "export default" in code:
+        code = re.sub(r"export\s+default\s+", f"const {component_name} = ", code, count=1)
+
+    if re.search(rf"(const|function|class)\s+{re.escape(component_name)}\b", code):
+        return code.rstrip() + f"\n\nexport {{ {component_name} }};\n"
+
+    return code
+
+
 def page_assembler_node(state: GraphState) -> dict:
     # Get project_id from state (should be passed from API)
     project_id = state.get("project_id")
     if not project_id:
         return {"error": "Missing project_id in state"}
 
-    # Save to toolkit/app/builds/{project_id}
-    output_dir = TOOLKIT_BUILDS_DIR / project_id
+    # Save to configured builds directory (defaults to apps/toolkit/app/builds/{project_id})
+    output_dir = CONFIG.output_dir / project_id
     components_dir = output_dir / "components"
     components_dir.mkdir(parents=True, exist_ok=True)
 
@@ -66,21 +100,14 @@ def page_assembler_node(state: GraphState) -> dict:
         if not component:
             continue
 
-        actual_component_name = _extract_component_name(component.code)
+        raw_code = _extract_fenced_tsx(component.code)
+
+        actual_component_name = _extract_component_name(raw_code)
         if not actual_component_name:
             actual_component_name = component.component_name
 
         # Ensure the component exports the expected name
-        code = component.code
-        if not re.search(rf'export\s+(const|function)\s+{re.escape(actual_component_name)}', code):
-            # If component uses default export, convert to named export
-            if 'export default' in code:
-                code = re.sub(
-                    r'export\s+default\s+',
-                    f'export const {actual_component_name} = ',
-                    code,
-                    count=1
-                )
+        code = _ensure_named_export(raw_code, actual_component_name)
 
         file_path = components_dir / f"{component.file_name}.tsx"
         file_path.write_text(code, encoding="utf-8")
