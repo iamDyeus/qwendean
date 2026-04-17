@@ -92,8 +92,8 @@ async def start_session(request: StartRequest):
         options=[OptionResponse(id=opt["id"], label=opt["label"]) for opt in current_state.get("options", [])],
         waiting_for_input=waiting_for_input,
         interrupt_prompt=interrupt_prompt,
-        section_plan=section_plan.dict() if section_plan else None,
-        preview_components=[c.dict() for c in preview_components],
+        section_plan=section_plan.model_dump() if section_plan else None,
+        preview_components=[c.model_dump() for c in preview_components],
         final_page_path=current_state.get("final_page_path"),
         error=current_state.get("error"),
     )
@@ -134,8 +134,8 @@ async def resume_session(request: ResumeRequest):
         options=[OptionResponse(id=opt["id"], label=opt["label"]) for opt in current_state.get("options", [])],
         waiting_for_input=waiting_for_input,
         interrupt_prompt=interrupt_prompt,
-        section_plan=section_plan.dict() if section_plan else None,
-        preview_components=[c.dict() for c in preview_components],
+        section_plan=section_plan.model_dump() if section_plan else None,
+        preview_components=[c.model_dump() for c in preview_components],
         final_page_path=current_state.get("final_page_path"),
         error=current_state.get("error"),
     )
@@ -201,8 +201,8 @@ async def approve_plan(request: ResumeRequest):
         options=[],
         waiting_for_input=waiting_for_input,
         interrupt_prompt=interrupt_prompt,
-        section_plan=section_plan.dict() if section_plan else None,
-        preview_components=[c.dict() for c in preview_components],
+        section_plan=section_plan.model_dump() if section_plan else None,
+        preview_components=[c.model_dump() for c in preview_components],
         final_page_path=current_state.get("final_page_path"),
         error=current_state.get("error"),
     )

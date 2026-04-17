@@ -46,7 +46,7 @@ def review_plan_node(state: GraphState) -> dict:
 
 
 def _should_continue_questionnaire(state: GraphState) -> str:
-    if state.get("questionnaire_complete") and not state.get("options"):
+    if state.get("questionnaire_complete"):
         return "plan"
     return "ask_user"
 

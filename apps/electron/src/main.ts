@@ -22,9 +22,9 @@ function createWindow() {
     webPreferences: {
       devTools: inDevelopment,
       contextIsolation: true,
-      nodeIntegration: true,
+      nodeIntegration: false,
       nodeIntegrationInSubFrames: false,
-
+      webviewTag: true,
       preload,
     },
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "hidden",
@@ -55,7 +55,7 @@ function checkForUpdates() {
   updateElectronApp({
     updateSource: {
       type: UpdateSourceType.ElectronPublicUpdateService,
-      repo: "LuanRoger/electron-shadcn",
+      repo: "iamdyeus/qwendean",
     },
   });
 }

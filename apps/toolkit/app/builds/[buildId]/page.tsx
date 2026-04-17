@@ -8,7 +8,7 @@ export default async function BuildPage({
   params: { buildId: string };
 }) {
   const buildId = params.buildId;
-  const buildPath = path.join(process.cwd(), "app", "builds", buildId, "page.tsx");
+  const buildPath = path.join(process.cwd(), "app", "builds", "[buildId]", buildId, "page.tsx");
 
   try {
     await fs.access(buildPath);
@@ -16,25 +16,23 @@ export default async function BuildPage({
     notFound();
   }
 
-  // Dynamically import the page component
-  const PageComponent = (await import(`@/app/builds/${buildId}/page`)).default;
+  const PageComponent = (await import(`./${buildId}/page`)).default;
 
   return <PageComponent />;
 }
 
 export async function generateStaticParams() {
-  const buildsDir = path.join(process.cwd(), "app", "builds");
-  
+  const buildsDir = path.join(process.cwd(), "app", "builds", "[buildId]");
+
   try {
-    const builds = await fs.readdir(buildsDir);
-    return builds
-      .filter(async (build) => {
-        const stat = await fs.stat(path.join(buildsDir, build));
-        return stat.isDirectory();
+    const entries = await fs.readdir(buildsDir);
+    const dirs = await Promise.all(
+      entries.map(async (entry) => {
+        const stat = await fs.stat(path.join(buildsDir, entry));
+        return stat.isDirectory() ? entry : null;
       })
-      .map((build) => ({
-        buildId: build,
-      }));
+    );
+    return dirs.filter(Boolean).map((buildId) => ({ buildId }));
   } catch {
     return [];
   }

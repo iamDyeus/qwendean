@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import { TOOLKIT_BUILDS_DIR } from '../constants';
 
 export interface Project {
   id: string;
@@ -90,9 +91,8 @@ export function deleteProject(id: string): void {
   const db = getDatabase();
   const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
   stmt.run(id);
-  
-  // Delete build files if they exist
-  const buildPath = path.join(__dirname, '..', '..', '..', '..', 'toolkit', 'app', 'builds', id);
+
+  const buildPath = path.join(TOOLKIT_BUILDS_DIR, id);
   if (fs.existsSync(buildPath)) {
     fs.rmSync(buildPath, { recursive: true, force: true });
   }

@@ -42,7 +42,6 @@ class GraphState(TypedDict, total=False):
     user_request: str
     messages: Annotated[list[ChatMessage], operator.add]
     options: list[Option]
-    industry: str
     questionnaire_complete: bool
     section_plan: SectionPlan | None
     generated_components: Annotated[list[GeneratedComponent], operator.add]
