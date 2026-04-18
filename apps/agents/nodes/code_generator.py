@@ -13,13 +13,32 @@ from state import GeneratedComponent, GraphState
 MAX_CONCURRENT = 3
 
 
-def _strip_markdown_fences(text: str) -> str:
+import re
+
+
+def _extract_code(text: str) -> str:
+    """Extract pure TSX code from LLM output, stripping any prose prefix/suffix."""
     text = text.strip()
-    if text.startswith("```"):
-        first_newline = text.index("\n")
-        text = text[first_newline + 1:]
-    if text.endswith("```"):
-        text = text[:text.rfind("```")]
+
+    # Try to extract from markdown fences first
+    fence_match = re.search(r"```(?:tsx?|jsx?)?\s*\n([\s\S]*?)```", text, re.IGNORECASE)
+    if fence_match:
+        return fence_match.group(1).strip()
+
+    # Find where actual code starts (first import, 'use client', or JSX comment)
+    code_start = re.search(r'^(?:"use client"|\'use client\'|import |//|/\*)', text, re.MULTILINE)
+    if code_start:
+        text = text[code_start.start():]
+
+    # Strip any trailing prose after the last export statement
+    lines = text.splitlines()
+    last_export = -1
+    for i, line in enumerate(lines):
+        if line.strip().startswith("export"):
+            last_export = i
+    if last_export != -1:
+        text = "\n".join(lines[:last_export + 1])
+
     return text.strip()
 
 
@@ -59,7 +78,7 @@ async def _generate_one_ollama(
         async with httpx.AsyncClient(timeout=300.0) as client:
             response = await client.post(f"{base_url}/api/generate", json=payload)
             response.raise_for_status()
-            code = _strip_markdown_fences(response.json()["response"])
+            code = _extract_code(response.json()["response"])
 
     return GeneratedComponent(
         section_name=section_name,
@@ -84,7 +103,7 @@ async def _generate_one_hf(
             SystemMessage(content=CODE_GENERATION_SYSTEM),
             HumanMessage(content=section_prompt),
         ])
-        code = _strip_markdown_fences(response.content)
+        code = _extract_code(response.content)
 
     return GeneratedComponent(
         section_name=section_name,
