@@ -72,6 +72,22 @@ def _strip_trailing_prose(code: str) -> str:
     return "\n".join(lines[: last_export_idx + 1]) + "\n"
 
 
+_CLIENT_HOOKS = re.compile(
+    r'\b(useState|useEffect|useRef|useCallback|useMemo|useContext|useReducer|'
+    r'useLayoutEffect|useTransition|useDeferredValue|'
+    r'onClick|onChange|onSubmit|onKeyDown|onKeyPress|onMouseEnter|onMouseLeave)\b'
+)
+
+
+def _ensure_use_client(code: str) -> str:
+    """Prepend 'use client' if the code uses hooks or event handlers but is missing the directive."""
+    if '"use client"' in code or "'use client'" in code:
+        return code
+    if _CLIENT_HOOKS.search(code):
+        return '"use client";\n\n' + code
+    return code
+
+
 def page_assembler_node(state: GraphState) -> dict:
     project_id = state.get("project_id")
     if not project_id:
@@ -105,6 +121,7 @@ def page_assembler_node(state: GraphState) -> dict:
         name = _extract_component_name(code) or section.component_name
         code = _normalize_exports(code, name)
         code = _strip_trailing_prose(code)
+        code = _ensure_use_client(code)
 
         (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
         import_lines.append(f'import {{ {name} as {section.component_name} }} from "./components/{section.file_name}";')

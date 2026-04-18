@@ -177,6 +177,7 @@ CONTENT GUIDELINES:
 - Use semantic placeholders: "Heading", "Subheading", "Description", "Button Text"
 - Focus on structure and layout, not copy
 - Generate production-ready, valid TSX only
+- If you use .map() over any array, ALWAYS define that array as a const in the same file with realistic placeholder items — never reference an undefined variable
 
 OUTPUT: Pure TSX code. No explanations, no markdown fences, no prose.
 """
