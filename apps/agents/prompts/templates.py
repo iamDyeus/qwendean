@@ -152,7 +152,7 @@ CODE_GENERATION_SYSTEM = """\
 Task: Generate one section component for a Next.js landing page using React TypeScript.
 
 AVAILABLE SHADCN COMPONENTS:
-Import from "@/components/ui/*":
+Import from "@/components/ui/<component-name>" ONLY — no other import paths for UI components:
 accordion, alert, alert-dialog, aspect-ratio, avatar, badge, breadcrumb, button, 
 button-group, calendar, card, carousel, chart, checkbox, collapsible, combobox, 
 command, context-menu, dialog, drawer, dropdown-menu, field, form, hover-card, 
