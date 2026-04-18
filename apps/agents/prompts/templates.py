@@ -170,6 +170,8 @@ STRUCTURE REQUIREMENTS:
 - Use ONLY components from the list above
 - Export format: export { ComponentName }; (NO default exports)
 - Fully responsive using Tailwind breakpoints (sm/md/lg/xl)
+- Any max-w-* container must include mx-auto to stay centered
+- Add px-4 md:px-8 on the section's inner content container to prevent content touching screen edges (except navbar and footer which should be full-width)
 
 CONTENT GUIDELINES:
 - Use semantic placeholders: "Heading", "Subheading", "Description", "Button Text"
