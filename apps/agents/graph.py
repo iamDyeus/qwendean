@@ -60,7 +60,7 @@ def _after_review(state: GraphState) -> str:
     return "generate"
 
 
-def build_graph() -> StateGraph:
+def build_graph():
     builder = StateGraph(GraphState)
 
     builder.add_node("intake", intake_node)
@@ -89,5 +89,8 @@ def build_graph() -> StateGraph:
     builder.add_edge("code_generator", "page_assembler")
     builder.add_edge("page_assembler", END)
 
-    checkpointer = InMemorySaver()
-    return builder.compile(checkpointer=checkpointer)
+    from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
+    checkpointer = InMemorySaver(serde=JsonPlusSerializer(
+        allowed_msgpack_modules=[("state", "SectionPlan"), ("state", "GeneratedComponent")]
+    ))
+    return builder.compile(checkpointer=checkpointer), checkpointer

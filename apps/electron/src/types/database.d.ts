@@ -12,6 +12,7 @@ export interface DatabaseAPI {
   getProject: (id: string) => Promise<Project | undefined>;
   updateConversation: (id: string, conversation: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
+  resetProject: (id: string) => Promise<void>;
 }
 
 export interface ElectronAPI {

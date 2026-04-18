@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, MutableRefObject } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,13 +9,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ArrowUp, Square } from "lucide-react";
 import { landingPageApi, type Message, type Option } from "@/lib/api";
 import { PlanEditor } from "./plan-editor";
+import type { GenerationStatus } from "@/routes/app.$appId";
 
 interface ChatSidebarProps {
   projectId: string;
+  projectName: string;
+  onStatusChange: (status: GenerationStatus) => void;
+  resetRef: MutableRefObject<() => void>;
 }
 
-export function ChatSidebar({ projectId }: ChatSidebarProps) {
-  const [sessionId] = useState(() => projectId);
+export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }: ChatSidebarProps) {
+  const sessionId = projectId;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +28,18 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
   const [sectionPlan, setSectionPlan] = useState<any>(null);
   const [showPlanEditor, setShowPlanEditor] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    resetRef.current = () => {
+      setMessages([]);
+      setInput("");
+      setOptions([]);
+      setHasStarted(false);
+      setSectionPlan(null);
+      setShowPlanEditor(false);
+      setIsGenerating(false);
+    };
+  }, [resetRef]);
 
   useEffect(() => {
     loadConversationHistory();
@@ -37,6 +53,11 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
         if (messages.length > 0) {
           setMessages(messages);
           setHasStarted(true);
+          // Restore preview status from history
+          const lastMsg = messages[messages.length - 1];
+          if (lastMsg?.role === "assistant" && lastMsg.content.includes("Generated") && lastMsg.content.includes("components successfully")) {
+            onStatusChange("done");
+          }
         }
       }
     } catch (error) {
@@ -62,7 +83,11 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
 
     const userRequest = input;
     setInput("");
+
+    const userMessage: Message = { role: "user", content: userRequest };
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
+    onStatusChange("understanding");
 
     try {
       const response = await landingPageApi.startSession(
@@ -78,18 +103,17 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
 
       if (response.section_plan) {
         setSectionPlan(response.section_plan);
+        onStatusChange("waiting_approval");
         if (!response.options || response.options.length === 0) {
           setShowPlanEditor(true);
         }
       }
     } catch (error) {
       console.error("Failed to start session:", error);
-      setMessages([
-        {
-          role: "assistant",
-          content:
-            "Sorry, there was an error connecting to the server. Please try again.",
-        },
+      onStatusChange("idle");
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Sorry, there was an error connecting to the server. Please try again." },
       ]);
     } finally {
       setIsLoading(false);
@@ -100,36 +124,31 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
     if (!message.trim() || isLoading) return;
 
     const userMessage: Message = { role: "user", content: message };
-    const messagesWithUser = [...messages, userMessage];
-    setMessages(messagesWithUser);
+    setMessages((prev) => [...prev, userMessage]);
     setOptions([]);
     setIsLoading(true);
+    onStatusChange("understanding");
 
     try {
       const response = await landingPageApi.resumeSession(sessionId, message);
-      const newMessages = [
-        ...messagesWithUser,
-        ...response.messages.filter((m) => m.role === "assistant"),
-      ];
-      setMessages(newMessages);
+      setMessages(response.messages);
       setOptions(response.options);
 
-      await saveConversation(newMessages);
+      await saveConversation(response.messages);
 
       if (response.section_plan) {
         setSectionPlan(response.section_plan);
+        onStatusChange("waiting_approval");
         if (!response.options || response.options.length === 0) {
           setShowPlanEditor(true);
         }
       }
     } catch (error) {
       console.error("Failed to send message:", error);
+      onStatusChange("idle");
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, there was an error. Please try again.",
-        },
+        { role: "assistant", content: "Sorry, there was an error. Please try again." },
       ]);
     } finally {
       setIsLoading(false);
@@ -139,6 +158,7 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
   const handleApprovePlan = async (updatedPlan: any) => {
     setIsGenerating(true);
     setShowPlanEditor(false);
+    onStatusChange("generating");
 
     try {
       // Update plan if edited
@@ -161,9 +181,11 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
         const updatedMessages = [...messages, successMessage];
         setMessages(updatedMessages);
         await saveConversation(updatedMessages);
+        onStatusChange("done");
       }
     } catch (error) {
       console.error("Failed to approve plan:", error);
+      onStatusChange("waiting_approval");
       setMessages((prev) => [
         ...prev,
         {
@@ -208,6 +230,13 @@ export function ChatSidebar({ projectId }: ChatSidebarProps) {
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full w-full">
             <div className="flex flex-col gap-4 p-4">
+              {!hasStarted && messages.length === 0 && !isLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-xs rounded-lg px-3 py-2 text-sm bg-secondary text-secondary-foreground">
+                  👋 Hi! What would you like to build for <strong>{projectName}</strong>? Describe your landing page idea and I'll get started.
+                  </div>
+                </div>
+              )}
               {messages.map((message, idx) => (
                 <div
                   key={idx}

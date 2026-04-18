@@ -14,4 +14,5 @@ export const ENVIRONMENT_VARIABLES = {
 export const inDevelopment = ENVIRONMENT_VARIABLES.NODE_ENV === "development";
 
 // Absolute path to the toolkit builds directory — must match agents OUTPUT_DIR
-export const TOOLKIT_BUILDS_DIR = "D:\\projects\\qwendean\\apps\\toolkit\\app\\builds\\[buildId]";
+export const TOOLKIT_BUILDS_DIR = "D:\\projects\\qwendean\\apps\\toolkit\\builds";
+export const TOOLKIT_APP_BUILDS_DIR = "D:\\projects\\qwendean\\apps\\toolkit\\app\\builds\\[buildId]";

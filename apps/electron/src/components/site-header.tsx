@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { Settings, Plus } from "lucide-react"
+import { Settings, Plus, RotateCcw } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -18,7 +18,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 
-export function SiteHeader() {
+export function SiteHeader({ projectName, onReset }: { projectName?: string; onReset?: () => void }) {
   const [newAppDialogOpen, setNewAppDialogOpen] = useState(false)
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
   const [appName, setAppName] = useState("")
@@ -43,12 +43,18 @@ export function SiteHeader() {
             My Apps
           </Link>
           <span className="text-muted-foreground">/</span>
-          <span className="font-semibold">User App Name</span>
+          <span className="font-semibold">{projectName || "..."}</span>
         </div>
 
         <div className="flex-1" />
 
         <div className="flex items-center gap-2">
+          {onReset && (
+            <Button size="sm" variant="ghost" className="gap-2 text-muted-foreground hover:text-destructive" onClick={onReset}>
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </Button>
+          )}
           <Dialog open={newAppDialogOpen} onOpenChange={setNewAppDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2">

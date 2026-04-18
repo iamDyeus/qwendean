@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { TOOLKIT_BUILDS_DIR } from '../constants';
+import { TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR } from '../constants';
 
 export interface Project {
   id: string;
@@ -87,14 +87,26 @@ export function updateProjectConversation(id: string, conversation: string): voi
   stmt.run(conversation, now, id);
 }
 
+export function resetProject(id: string): void {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`UPDATE projects SET conversation = '[]', updated_at = ? WHERE id = ?`);
+  stmt.run(now, id);
+
+  for (const dir of [TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR]) {
+    const buildPath = path.join(dir, id);
+    if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+  }
+}
+
 export function deleteProject(id: string): void {
   const db = getDatabase();
   const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
   stmt.run(id);
 
-  const buildPath = path.join(TOOLKIT_BUILDS_DIR, id);
-  if (fs.existsSync(buildPath)) {
-    fs.rmSync(buildPath, { recursive: true, force: true });
+  for (const dir of [TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR]) {
+    const buildPath = path.join(dir, id);
+    if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
   }
 }
 

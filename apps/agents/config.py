@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIR = PROJECT_ROOT / "apps" / "toolkit" / "app" / "builds" / "[buildId]"
+OUTPUT_DIR = PROJECT_ROOT / "apps" / "toolkit" / "builds"
 
 
 @dataclass(frozen=True)

@@ -47,25 +47,16 @@ PROMPT RULES (critical — code LLM has 4K token limit):
 """
 
 CODE_GENERATION_SYSTEM = """\
-Output ONLY valid TSX. No explanations. No markdown fences. No comments outside JSX.
+based on the user prompt and section plan, generate the React-typescript code for the landing page section.
 
 Rules:
 - Imports at top
 - Single functional component
-- ShadCN from "@/components/ui/*", Tailwind for styling, fully responsive
+- ShadCN components from "@/components/ui/*", Tailwind for styling, fully responsive
 - Last line must be: export { ComponentName };
 - No export default
+- Your task is to generate the code for the section, not the entire page. Do NOT include other sections or a page wrapper.
+- Your responsibility is to generate code with suitable strcutre and layout, not to write the copy. Use placeholder text like "Heading", "Subheading" etc. 
 
-Structure:
-import { Button } from "@/components/ui/button";
-
-const ComponentName = () => {
-  return (
-    <section className="...">
-      ...
-    </section>
-  );
-};
-
-export { ComponentName };
+MAKE SURE YOU OUTPUT VALID TSX & NO PROSE.
 """

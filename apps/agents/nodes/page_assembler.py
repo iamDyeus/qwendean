@@ -59,6 +59,19 @@ def _normalize_exports(code: str, expected_name: str) -> str:
     return code.rstrip() + f"\n\nexport {{ {expected_name} }};\n"
 
 
+def _strip_trailing_prose(code: str) -> str:
+    """Truncate anything after the last export statement (LLM often appends prose)."""
+    lines = code.splitlines()
+    last_export_idx = -1
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("export ") or stripped.startswith("export{"):
+            last_export_idx = i
+    if last_export_idx == -1:
+        return code
+    return "\n".join(lines[: last_export_idx + 1]) + "\n"
+
+
 def page_assembler_node(state: GraphState) -> dict:
     project_id = state.get("project_id")
     if not project_id:
@@ -91,6 +104,7 @@ def page_assembler_node(state: GraphState) -> dict:
 
         name = _extract_component_name(code) or section.component_name
         code = _normalize_exports(code, name)
+        code = _strip_trailing_prose(code)
 
         (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
         import_lines.append(f'import {{ {name} }} from "./components/{section.file_name}";')

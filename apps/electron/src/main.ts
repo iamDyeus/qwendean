@@ -1,10 +1,6 @@
 import path from "node:path";
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, session } from "electron";
 import { ipcMain } from "electron/main";
-import {
-  installExtension,
-  REACT_DEVELOPER_TOOLS,
-} from "electron-devtools-installer";
 import { UpdateSourceType, updateElectronApp } from "update-electron-app";
 import { ipcContext } from "@/ipc/context";
 import { IPC_CHANNELS, inDevelopment } from "./constants";
@@ -43,11 +39,17 @@ function createWindow() {
 }
 
 async function installExtensions() {
+  if (!inDevelopment) return;
   try {
-    const result = await installExtension(REACT_DEVELOPER_TOOLS);
-    console.log(`Extensions installed successfully: ${result.name}`);
+    // React DevTools extension ID
+    const reactDevToolsId = "fmkadmapgofadopljbjfkapdkoienihi";
+    const extPath = path.join(app.getPath("userData"), "extensions", reactDevToolsId);
+    const existing = session.defaultSession.extensions.getAllExtensions();
+    if (!existing.find((e) => e.id === reactDevToolsId)) {
+      await session.defaultSession.extensions.loadExtension(extPath, { allowFileAccess: true });
+    }
   } catch {
-    console.error("Failed to install extensions");
+    // Extension not pre-downloaded — silently skip in dev
   }
 }
 

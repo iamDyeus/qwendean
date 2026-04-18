@@ -5,10 +5,25 @@ import {
   getProject,
   updateProjectConversation,
   deleteProject,
+  resetProject,
   type Project,
 } from '../../database/db';
 
+const DB_CHANNELS = [
+  'db:create-project',
+  'db:get-all-projects',
+  'db:get-project',
+  'db:update-conversation',
+  'db:delete-project',
+  'db:reset-project',
+] as const;
+
 export function registerDatabaseHandlers() {
+  // Remove existing handlers to prevent duplicate registration errors on HMR
+  for (const channel of DB_CHANNELS) {
+    ipcMain.removeHandler(channel);
+  }
+
   ipcMain.handle('db:create-project', async (_event, name: string): Promise<Project> => {
     return createProject(name);
   });
@@ -27,5 +42,9 @@ export function registerDatabaseHandlers() {
 
   ipcMain.handle('db:delete-project', async (_event, id: string): Promise<void> => {
     return deleteProject(id);
+  });
+
+  ipcMain.handle('db:reset-project', async (_event, id: string): Promise<void> => {
+    return resetProject(id);
   });
 }

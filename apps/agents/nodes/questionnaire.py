@@ -45,7 +45,15 @@ def questionnaire_node(state: GraphState) -> dict:
         else:
             lc_messages.append(AIMessage(content=msg["content"]))
 
-    response = llm.invoke(lc_messages)
+    try:
+        response = llm.invoke(lc_messages)
+    except Exception as e:
+        return {
+            "messages": [{"role": "assistant", "content": f"⚠️ Could not reach the AI model. Make sure Ollama is running at {config.ollama_base_url}. Error: {e}"}],
+            "options": [],
+            "questionnaire_complete": False,
+        }
+
     assistant_text: str = response.content
 
     is_complete = COMPLETION_MARKER in assistant_text

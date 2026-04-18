@@ -1,5 +1,7 @@
 """FastAPI backend for Qwendean landing page generator."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,7 +10,23 @@ from langgraph.types import Command
 from graph import build_graph
 from state import GraphState
 
-app = FastAPI(title="Qwendean API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    import httpx
+    import logging
+    from config import load_config
+    cfg = load_config()
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as c:
+            await c.get(f"{cfg.ollama_base_url}/api/tags")
+            logging.info(f"Ollama reachable at {cfg.ollama_base_url}")
+    except Exception as e:
+        logging.warning(f"⚠️  Ollama NOT reachable at {cfg.ollama_base_url} — start Ollama before using the API. ({e})")
+    yield
+
+
+app = FastAPI(title="Qwendean API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,8 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-graph = build_graph()
-sessions = {}
+graph, checkpointer = build_graph()
 
 
 class StartRequest(BaseModel):
@@ -36,6 +53,10 @@ class ResumeRequest(BaseModel):
 class UpdatePlanRequest(BaseModel):
     session_id: str
     section_plan: dict
+
+
+class ResetRequest(BaseModel):
+    session_id: str
 
 
 class OptionResponse(BaseModel):
@@ -55,162 +76,119 @@ class SessionResponse(BaseModel):
     error: str | None = None
 
 
-@app.post("/api/start", response_model=SessionResponse)
-async def start_session(request: StartRequest):
-    session_id = request.session_id
+def _get_state(session_id: str) -> dict:
+    """Read the full accumulated state from the graph checkpointer."""
     config = {"configurable": {"thread_id": session_id}}
-    
-    initial_state: GraphState = {
-        "user_request": request.user_request,
-        "project_id": request.project_id
-    }
-    
-    current_state = {}
+    snapshot = graph.get_state(config)
+    return dict(snapshot.values) if snapshot else {}
+
+
+def _build_response(session_id: str, interrupt_prompt: str | None) -> SessionResponse:
+    state = _get_state(session_id)
+    waiting_for_input = interrupt_prompt is not None
+    section_plan = state.get("section_plan")
+    preview_components = state.get("preview_components", [])
+
+    return SessionResponse(
+        session_id=session_id,
+        messages=state.get("messages", []),
+        options=[OptionResponse(id=opt["id"], label=opt["label"]) for opt in state.get("options", [])],
+        waiting_for_input=waiting_for_input,
+        interrupt_prompt=interrupt_prompt,
+        section_plan=section_plan.model_dump() if section_plan else None,
+        preview_components=[c.model_dump() for c in preview_components],
+        final_page_path=state.get("final_page_path"),
+        error=state.get("error"),
+    )
+
+
+def _stream_until_interrupt(cmd, config: dict) -> str | None:
+    """Stream graph events, return interrupt prompt if hit, else None."""
     interrupt_prompt = None
-    
-    for event in graph.stream(initial_state, config=config, stream_mode="updates"):
+    for event in graph.stream(cmd, config=config, stream_mode="updates"):
         if "__interrupt__" in event:
             interrupts = event["__interrupt__"]
             if interrupts:
                 interrupt_prompt = interrupts[0].value if hasattr(interrupts[0], "value") else str(interrupts[0])
             break
-        
-        for node_name, node_output in event.items():
-            if node_name == "__interrupt__" or not isinstance(node_output, dict):
-                continue
-            current_state.update(node_output)
-    
-    sessions[session_id] = current_state
-    
-    waiting_for_input = interrupt_prompt is not None
-    section_plan = None if waiting_for_input else current_state.get("section_plan")
-    preview_components = [] if waiting_for_input else current_state.get("preview_components", [])
+    return interrupt_prompt
 
-    return SessionResponse(
-        session_id=session_id,
-        messages=current_state.get("messages", []),
-        options=[OptionResponse(id=opt["id"], label=opt["label"]) for opt in current_state.get("options", [])],
-        waiting_for_input=waiting_for_input,
-        interrupt_prompt=interrupt_prompt,
-        section_plan=section_plan.model_dump() if section_plan else None,
-        preview_components=[c.model_dump() for c in preview_components],
-        final_page_path=current_state.get("final_page_path"),
-        error=current_state.get("error"),
-    )
+
+@app.post("/api/reset")
+async def reset_session(request: ResetRequest):
+    session_id = request.session_id
+    # InMemorySaver stores checkpoints keyed by thread_id — wipe them directly
+    checkpointer.storage.pop(session_id, None)
+    checkpointer.writes.pop(session_id, None)
+    return {"session_id": session_id, "reset": True}
+
+
+@app.post("/api/start", response_model=SessionResponse)
+async def start_session(request: StartRequest):
+    session_id = request.session_id
+    config = {"configurable": {"thread_id": session_id}}
+
+    initial_state: GraphState = {
+        "user_request": request.user_request,
+        "project_id": request.project_id,
+    }
+
+    interrupt_prompt = _stream_until_interrupt(initial_state, config)
+    return _build_response(session_id, interrupt_prompt)
 
 
 @app.post("/api/resume", response_model=SessionResponse)
 async def resume_session(request: ResumeRequest):
     session_id = request.session_id
     config = {"configurable": {"thread_id": session_id}}
-    
-    if session_id not in sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    current_state = sessions[session_id]
-    interrupt_prompt = None
-    
-    for event in graph.stream(Command(resume=request.user_input), config=config, stream_mode="updates"):
-        if "__interrupt__" in event:
-            interrupts = event["__interrupt__"]
-            if interrupts:
-                interrupt_prompt = interrupts[0].value if hasattr(interrupts[0], "value") else str(interrupts[0])
-            break
-        
-        for node_name, node_output in event.items():
-            if node_name == "__interrupt__" or not isinstance(node_output, dict):
-                continue
-            current_state.update(node_output)
-    
-    sessions[session_id] = current_state
-    
-    waiting_for_input = interrupt_prompt is not None
-    section_plan = None if waiting_for_input else current_state.get("section_plan")
-    preview_components = [] if waiting_for_input else current_state.get("preview_components", [])
 
-    return SessionResponse(
-        session_id=session_id,
-        messages=current_state.get("messages", []),
-        options=[OptionResponse(id=opt["id"], label=opt["label"]) for opt in current_state.get("options", [])],
-        waiting_for_input=waiting_for_input,
-        interrupt_prompt=interrupt_prompt,
-        section_plan=section_plan.model_dump() if section_plan else None,
-        preview_components=[c.model_dump() for c in preview_components],
-        final_page_path=current_state.get("final_page_path"),
-        error=current_state.get("error"),
-    )
+    if not graph.get_state(config).values:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    interrupt_prompt = _stream_until_interrupt(Command(resume=request.user_input), config)
+    return _build_response(session_id, interrupt_prompt)
 
 
 @app.post("/api/update-plan", response_model=SessionResponse)
 async def update_plan(request: UpdatePlanRequest):
     session_id = request.session_id
-    
-    if session_id not in sessions:
+    config = {"configurable": {"thread_id": session_id}}
+
+    snapshot = graph.get_state(config)
+    if not snapshot.values:
         raise HTTPException(status_code=404, detail="Session not found")
-    
-    # Update the plan in session state
+
     from state import SectionPlan
-    sessions[session_id]["section_plan"] = SectionPlan.model_validate(request.section_plan)
-    
-    return SessionResponse(
-        session_id=session_id,
-        messages=sessions[session_id].get("messages", []),
-        options=[],
-        waiting_for_input=False,
-        interrupt_prompt="Plan updated. Click approve to generate code.",
-        section_plan=request.section_plan,
-        preview_components=[],
-        final_page_path=None,
-        error=None,
-    )
+    graph.update_state(config, {"section_plan": SectionPlan.model_validate(request.section_plan)})
+
+    return _build_response(session_id, "Plan updated. Click approve to generate code.")
 
 
 @app.post("/api/approve-plan", response_model=SessionResponse)
 async def approve_plan(request: ResumeRequest):
     session_id = request.session_id
     config = {"configurable": {"thread_id": session_id}}
-    
-    if session_id not in sessions:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
-    current_state = sessions[session_id]
-    interrupt_prompt = None
-    
-    # Resume with "approve" to trigger code generation
-    for event in graph.stream(Command(resume="approve"), config=config, stream_mode="updates"):
-        if "__interrupt__" in event:
-            interrupts = event["__interrupt__"]
-            if interrupts:
-                interrupt_prompt = interrupts[0].value if hasattr(interrupts[0], "value") else str(interrupts[0])
-            break
-        
-        for node_name, node_output in event.items():
-            if node_name == "__interrupt__" or not isinstance(node_output, dict):
-                continue
-            current_state.update(node_output)
-    
-    sessions[session_id] = current_state
-    
-    waiting_for_input = interrupt_prompt is not None
-    section_plan = None if waiting_for_input else current_state.get("section_plan")
-    preview_components = [] if waiting_for_input else current_state.get("preview_components", [])
 
-    return SessionResponse(
-        session_id=session_id,
-        messages=current_state.get("messages", []),
-        options=[],
-        waiting_for_input=waiting_for_input,
-        interrupt_prompt=interrupt_prompt,
-        section_plan=section_plan.model_dump() if section_plan else None,
-        preview_components=[c.model_dump() for c in preview_components],
-        final_page_path=current_state.get("final_page_path"),
-        error=current_state.get("error"),
-    )
+    if not graph.get_state(config).values:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    interrupt_prompt = _stream_until_interrupt(Command(resume="approve"), config)
+    return _build_response(session_id, interrupt_prompt)
 
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    import httpx
+    from config import load_config
+    cfg = load_config()
+    ollama_ok = False
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as c:
+            r = await c.get(f"{cfg.ollama_base_url}/api/tags")
+            ollama_ok = r.status_code == 200
+    except Exception:
+        pass
+    return {"status": "ok", "ollama": "reachable" if ollama_ok else "unreachable"}
 
 
 if __name__ == "__main__":
