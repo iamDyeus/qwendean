@@ -54,7 +54,7 @@ def _normalize_exports(code: str, expected_name: str) -> str:
         return code.rstrip() + "\n"
 
     # Remove any other export { ... } lines to avoid duplicates
-    code = re.sub(r'\nexport\s*\{[^}]*\}\s*;?', '', code)
+    code = re.sub(r'\n?export\s*\{[^}]*\}\s*;?', '', code)
 
     return code.rstrip() + f"\n\nexport {{ {expected_name} }};\n"
 
@@ -74,18 +74,68 @@ def _strip_trailing_prose(code: str) -> str:
 
 _CLIENT_HOOKS = re.compile(
     r'\b(useState|useEffect|useRef|useCallback|useMemo|useContext|useReducer|'
-    r'useLayoutEffect|useTransition|useDeferredValue|'
+    r'useLayoutEffect|useTransition|useDeferredValue|motion\.|'
     r'onClick|onChange|onSubmit|onKeyDown|onKeyPress|onMouseEnter|onMouseLeave)\b'
 )
 
 
 def _ensure_use_client(code: str) -> str:
-    """Prepend 'use client' if the code uses hooks or event handlers but is missing the directive."""
     if '"use client"' in code or "'use client'" in code:
         return code
     if _CLIENT_HOOKS.search(code):
         return '"use client";\n\n' + code
     return code
+
+
+def _fix_next_image(code: str) -> str:
+    if 'next/image' not in code:
+        return code
+    def add_dimensions(m: re.Match) -> str:
+        tag = m.group(0)
+        if 'width=' in tag or 'fill' in tag:
+            return tag
+        return re.sub(r'(\s*/?>)\s*$', r' width={800} height={600}\1', tag)
+    return re.sub(r'<Image\b[^>]*/?>', add_dimensions, code, flags=re.DOTALL)
+
+
+def _remove_hallucinated_imports(code: str) -> str:
+    lines = code.splitlines()
+    cleaned = []
+    for line in lines:
+        m = re.match(r'^import\s+.*\s+from\s+["\'](@/[^"\']+)["\']', line)
+        if m:
+            path = m.group(1)
+            if not (
+                path.startswith("@/components/ui/")
+                or path == "@/lib/utils"
+                or path.startswith("@/hooks/")
+            ):
+                continue
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
+def _normalize_react_icons(code: str) -> str:
+    return re.sub(
+        r'from\s+["\']react-icons/(?!fa["\'])[^"\']+["\']',
+        'from "react-icons/fa"',
+        code
+    )
+
+
+def _fix_duplicate_exports(code: str) -> str:
+    seen: set[str] = set()
+    lines = code.splitlines()
+    result = []
+    for line in reversed(lines):
+        m = re.match(r'^\s*export\s*\{\s*(\w+)\s*\}', line)
+        if m:
+            name = m.group(1)
+            if name in seen:
+                continue
+            seen.add(name)
+        result.append(line)
+    return "\n".join(reversed(result))
 
 
 def page_assembler_node(state: GraphState) -> dict:
@@ -121,6 +171,10 @@ def page_assembler_node(state: GraphState) -> dict:
         name = _extract_component_name(code) or section.component_name
         code = _normalize_exports(code, name)
         code = _strip_trailing_prose(code)
+        code = _remove_hallucinated_imports(code)
+        code = _normalize_react_icons(code)
+        code = _fix_next_image(code)
+        code = _fix_duplicate_exports(code)
         code = _ensure_use_client(code)
 
         (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
