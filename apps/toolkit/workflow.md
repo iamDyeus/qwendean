@@ -40,7 +40,7 @@ User prompt
 | Path | Purpose |
 |------|---------|
 | `apps/agents/` | FastAPI + LangGraph pipeline |
-| `apps/toolkit/builds/<projectId>/` | Primary build output (source of truth, written by agents) |
+| `apps/toolkit/builds/<projectId>/` | Primary build output — source of truth, written by agents |
 | `apps/toolkit/app/builds/[buildId]/<projectId>/` | Copy created on first request so Next.js can compile it |
 | `apps/toolkit/app/builds/[buildId]/page.tsx` | Next.js route — handles copy + retry import + rendering |
 | `apps/toolkit/app/builds/[buildId]/error.tsx` | Per-build error boundary |
@@ -51,3 +51,14 @@ User prompt
 - A build is only copied into `app/` when its route is first requested — broken old builds don't pollute the dev server
 - First-request cold-start race (webpack file watcher lag) is handled by a 500ms retry — transparent to the user
 - Each build gets its own error boundary via `error.tsx` — a broken build shows an inline error without affecting others
+
+## Running
+
+The toolkit dev server runs independently — start it manually with `pnpm dev` before using the electron app.
+Electron connects to it at `http://localhost:3000`.
+
+## Delete / Reset behaviour
+
+When a project is deleted or reset from the electron app:
+- `toolkit/builds/<projectId>/` is deleted (source of truth)
+- `toolkit/app/builds/[buildId]/<projectId>/` is also deleted if it exists (copied cache)
