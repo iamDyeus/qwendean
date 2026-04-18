@@ -107,15 +107,15 @@ def page_assembler_node(state: GraphState) -> dict:
         code = _strip_trailing_prose(code)
 
         (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
-        import_lines.append(f'import {{ {name} }} from "./components/{section.file_name}";')
-        jsx_lines.append(f"      <{name} />")
+        import_lines.append(f'import {{ {name} as {section.component_name} }} from "./components/{section.file_name}";')
+        jsx_lines.append(f"      <{section.component_name} />")
 
     if not import_lines:
         return {"error": "No components were assembled"}
 
     page = (
         "\n".join(import_lines)
-        + '\n\nconst LandingPage = () => (\n  <div className="min-h-screen">\n'
+        + '\n\nconst LandingPage = () => (\n  <div className="min-h-screen flex flex-col items-center">\n'
         + "\n".join(jsx_lines)
         + "\n  </div>\n);\n\nexport default LandingPage;\n"
     )

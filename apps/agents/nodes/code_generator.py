@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import load_config
 from llm_client import build_chat_model
-from prompts.templates import CODE_GENERATION_SYSTEM
+from prompts import CODE_GENERATION_SYSTEM
 from state import GeneratedComponent, GraphState
 
 MAX_CONCURRENT = 3

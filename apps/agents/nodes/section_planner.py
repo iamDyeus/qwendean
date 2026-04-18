@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import load_config
 from llm_client import build_chat_model
-from prompts.templates import SECTION_PLANNER_SYSTEM
+from prompts import SECTION_PLANNER_SYSTEM
 from state import GraphState, SectionPlan
 
 

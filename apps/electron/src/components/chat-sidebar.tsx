@@ -29,6 +29,12 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
   const [showPlanEditor, setShowPlanEditor] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, showPlanEditor, isLoading, isGenerating]);
+
   useEffect(() => {
     resetRef.current = () => {
       setMessages([]);
@@ -249,7 +255,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
                         : "bg-secondary text-secondary-foreground"
                     }`}
                   >
-                    {message.content}
+                    {message.content || "Check out the plan made for you 👇"}
                   </div>
                 </div>
               ))}
@@ -273,6 +279,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
                   </div>
                 </div>
               )}
+              <div ref={bottomRef} />
             </div>
           </ScrollArea>
         </div>

@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 from config import load_config
 from llm_client import build_chat_model
-from prompts.templates import QUESTIONNAIRE_SYSTEM
+from prompts import QUESTIONNAIRE_SYSTEM
 from state import GraphState, Option
 
 COMPLETION_MARKER = "[QUESTIONNAIRE_COMPLETE]"
