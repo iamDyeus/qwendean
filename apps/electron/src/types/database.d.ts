@@ -13,6 +13,7 @@ export interface DatabaseAPI {
   updateConversation: (id: string, conversation: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   resetProject: (id: string) => Promise<void>;
+  renameProject: (id: string, name: string) => Promise<void>;
 }
 
 export interface ElectronAPI {

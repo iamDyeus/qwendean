@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, ArrowRight } from "lucide-react";
+import { Plus, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -12,8 +12,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { generateGradientSVG } from "@/lib/gradient";
 
 interface Project {
   id: string;
@@ -28,6 +36,8 @@ function AppsPage() {
   const [newAppName, setNewAppName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,6 +77,19 @@ function AppsPage() {
       console.error('Failed to delete project:', error);
     } finally {
       setDeleteId(null);
+    }
+  };
+
+  const handleRenameConfirm = async () => {
+    if (!renameId || !renameName.trim()) return;
+    try {
+      await window.database.renameProject(renameId, renameName.trim());
+      setProjects(projects.map(p => p.id === renameId ? { ...p, name: renameName.trim() } : p));
+    } catch (error) {
+      console.error('Failed to rename project:', error);
+    } finally {
+      setRenameId(null);
+      setRenameName("");
     }
   };
 
@@ -134,6 +157,31 @@ function AppsPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Rename dialog */}
+        <Dialog open={!!renameId} onOpenChange={(open) => { if (!open) { setRenameId(null); setRenameName(""); } }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename App</DialogTitle>
+              <DialogDescription>Enter a new name for your app</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="rename">App Name</Label>
+                <Input
+                  id="rename"
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleRenameConfirm(); }}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setRenameId(null); setRenameName(""); }}>Cancel</Button>
+              <Button onClick={handleRenameConfirm} disabled={!renameName.trim()}>Rename</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {projects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="space-y-4">
@@ -147,28 +195,39 @@ function AppsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects.map((project) => (
-              <div key={project.id} className="relative group">
-                <Link to="/app/$appId" params={{ appId: project.id }}>
-                  <Card className="cursor-pointer transition-colors hover:bg-accent group/card">
-                    <CardHeader>
-                      <CardTitle>{project.name}</CardTitle>
-                      <CardDescription>Updated {new Date(project.updated_at).toLocaleDateString()}</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">Click to open and edit</p>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/card:opacity-100 transition-opacity" />
-                    </CardContent>
-                  </Card>
-                </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteId(project.id); }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+              <ContextMenu key={project.id}>
+                <ContextMenuTrigger asChild>
+                  <div className="relative">
+                    <Link to="/app/$appId" params={{ appId: project.id }}>
+                      <Card className="cursor-pointer py-0 pt-4 pb-6 transition-colors hover:bg-accent group/card overflow-hidden">
+                        <div className="px-4 pt-0">
+                          <div
+                            className="h-40 w-full rounded-md overflow-hidden"
+                            dangerouslySetInnerHTML={{ __html: generateGradientSVG(Number(project.id)) }}
+                          />
+                        </div>
+                        <CardHeader>
+                          <CardTitle>{project.name}</CardTitle>
+                          <CardDescription>Updated {new Date(project.updated_at).toLocaleDateString()}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex items-center justify-between">
+                          <p className="text-sm text-muted-foreground">Click to open and edit</p>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover/card:opacity-100 transition-opacity" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </div>
+                </ContextMenuTrigger>
+                <ContextMenuContent className="w-40">
+                  <ContextMenuItem onClick={() => { setRenameId(project.id); setRenameName(project.name); }}>
+                    Rename
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem variant="destructive" onClick={() => setDeleteId(project.id)}>
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenuContent>
+              </ContextMenu>
             ))}
           </div>
         )}

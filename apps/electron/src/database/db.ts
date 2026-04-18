@@ -110,6 +110,13 @@ export function deleteProject(id: string): void {
   }
 }
 
+export function renameProject(id: string, name: string): void {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const stmt = db.prepare('UPDATE projects SET name = ?, updated_at = ? WHERE id = ?');
+  stmt.run(name, now, id);
+}
+
 export function closeDatabase() {
   if (db) {
     db.close();

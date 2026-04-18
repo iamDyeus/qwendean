@@ -6,6 +6,7 @@ import {
   updateProjectConversation,
   deleteProject,
   resetProject,
+  renameProject,
   type Project,
 } from '../../database/db';
 
@@ -16,6 +17,7 @@ const DB_CHANNELS = [
   'db:update-conversation',
   'db:delete-project',
   'db:reset-project',
+  'db:rename-project',
 ] as const;
 
 export function registerDatabaseHandlers() {
@@ -46,5 +48,9 @@ export function registerDatabaseHandlers() {
 
   ipcMain.handle('db:reset-project', async (_event, id: string): Promise<void> => {
     return resetProject(id);
+  });
+
+  ipcMain.handle('db:rename-project', async (_event, id: string, name: string): Promise<void> => {
+    return renameProject(id, name);
   });
 }
