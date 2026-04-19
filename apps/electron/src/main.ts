@@ -15,6 +15,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    icon: path.join(__dirname, "../../images/qwendean.png"),
     webPreferences: {
       devTools: inDevelopment,
       contextIsolation: true,
