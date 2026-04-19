@@ -10,7 +10,7 @@ from llm_client import build_chat_model
 from prompts import CODE_GENERATION_SYSTEM
 from state import GeneratedComponent, GraphState
 
-MAX_CONCURRENT = 3
+MAX_CONCURRENT = 3  # matches OLLAMA_NUM_PARALLEL env var — set that in Ollama to enable true GPU parallelism
 
 
 import re
@@ -60,7 +60,7 @@ async def _generate_one_ollama(
         options: dict[str, object] = {
             "temperature": temperature,
             "num_predict": max_tokens,
-            "repeat_penalty": 1.0,
+            "repeat_penalty": 1.05,
         }
         if top_p is not None:
             options["top_p"] = top_p
@@ -73,6 +73,7 @@ async def _generate_one_ollama(
             "model": model,
             "prompt": section_prompt,
             "stream": False,
+            "think": False,
             "options": options,
         }
         async with httpx.AsyncClient(timeout=300.0) as client:

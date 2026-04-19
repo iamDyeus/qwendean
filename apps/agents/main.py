@@ -176,7 +176,72 @@ async def approve_plan(request: ResumeRequest):
     return _build_response(session_id, interrupt_prompt)
 
 
-@app.get("/api/health")
+class RegenerateSectionRequest(BaseModel):
+    session_id: str
+    project_id: str
+    section: dict
+
+
+@app.post("/api/regenerate-section")
+async def regenerate_section(request: RegenerateSectionRequest):
+    from state import SectionPlan, SectionPromptMapping, GeneratedComponent
+    from nodes.code_generator import _generate_one_hf, _generate_one_ollama
+    from nodes.page_assembler import (
+        _strip_fences, _extract_component_name, _normalize_exports,
+        _strip_trailing_prose, _remove_hallucinated_imports,
+        _normalize_react_icons, _fix_next_image,
+        _ensure_use_client,
+    )
+    from config import load_config
+    from pathlib import Path
+    import asyncio
+
+    section = SectionPromptMapping.model_validate(request.section)
+    config = load_config()
+
+    semaphore = asyncio.Semaphore(1)
+    if config.generator_provider == "ollama":
+        comp = await _generate_one_ollama(
+            base_url=config.ollama_base_url,
+            model=config.ollama_model,
+            section_prompt=section.prompt,
+            component_name=section.component_name,
+            section_name=section.section_name,
+            file_name=section.file_name,
+            temperature=config.generator_llm.temperature,
+            top_p=config.generator_llm.top_p,
+            top_k=config.generator_llm.top_k,
+            min_p=config.generator_llm.min_p,
+            max_tokens=config.generator_llm.max_tokens,
+            semaphore=semaphore,
+        )
+    else:
+        comp = await _generate_one_hf(
+            section_prompt=section.prompt,
+            component_name=section.component_name,
+            section_name=section.section_name,
+            file_name=section.file_name,
+            semaphore=semaphore,
+        )
+
+    # Write the single component file
+    output_dir = config.output_dir / request.project_id
+    components_dir = output_dir / "components"
+    components_dir.mkdir(parents=True, exist_ok=True)
+
+    code = _strip_fences(comp.code)
+    name = _extract_component_name(code) or section.component_name
+    code = _normalize_exports(code, name)
+    code = _strip_trailing_prose(code)
+    code = _remove_hallucinated_imports(code)
+    code = _normalize_react_icons(code)
+    code = _fix_next_image(code)
+    code = _ensure_use_client(code)
+    (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
+
+    return {"file_name": section.file_name, "component_name": name, "code": code}
+
+
 async def health():
     import httpx
     from config import load_config

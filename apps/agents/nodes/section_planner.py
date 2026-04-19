@@ -26,6 +26,8 @@ def section_planner_node(state: GraphState) -> dict:
         provider=config.planner_provider,
         base_url=config.ollama_base_url,
         model=config.ollama_planner_model,
+        repeat_penalty=1.12,
+        frequency_penalty=0.05,
     )
 
     conversation = _build_conversation_summary(state)

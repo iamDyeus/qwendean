@@ -71,12 +71,13 @@ function AppsPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteId) return;
+    const idToDelete = deleteId;
     try {
-      await window.database.deleteProject(deleteId);
-      setProjects(projects.filter(p => p.id !== deleteId));
+      await window.database.deleteProject(idToDelete);
     } catch (error) {
       console.error('Failed to delete project:', error);
     } finally {
+      setProjects(prev => prev.filter(p => p.id !== idToDelete));
       setDeleteId(null);
     }
   };

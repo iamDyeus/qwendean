@@ -25,12 +25,17 @@ function AppChatPage() {
   }, [appId]);
 
   const handleReset = async () => {
-    await Promise.all([
-      window.database.resetProject(appId),
-      landingPageApi.resetSession(appId),
-    ]);
-    setGenerationStatus("idle");
-    resetRef.current();
+    try {
+      await Promise.all([
+        window.database.resetProject(appId),
+        landingPageApi.resetSession(appId),
+      ]);
+    } catch (error) {
+      console.error('Reset error:', error);
+    } finally {
+      setGenerationStatus("idle");
+      resetRef.current();
+    }
   };
 
   return (

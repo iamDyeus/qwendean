@@ -4,6 +4,7 @@ import {
   getAllProjects,
   getProject,
   updateProjectConversation,
+  updateProjectSectionPlan,
   deleteProject,
   resetProject,
   renameProject,
@@ -15,6 +16,7 @@ const DB_CHANNELS = [
   'db:get-all-projects',
   'db:get-project',
   'db:update-conversation',
+  'db:update-section-plan',
   'db:delete-project',
   'db:reset-project',
   'db:rename-project',
@@ -40,6 +42,10 @@ export function registerDatabaseHandlers() {
 
   ipcMain.handle('db:update-conversation', async (_event, id: string, conversation: string): Promise<void> => {
     return updateProjectConversation(id, conversation);
+  });
+
+  ipcMain.handle('db:update-section-plan', async (_event, id: string, sectionPlan: string): Promise<void> => {
+    return updateProjectSectionPlan(id, sectionPlan);
   });
 
   ipcMain.handle('db:delete-project', async (_event, id: string): Promise<void> => {

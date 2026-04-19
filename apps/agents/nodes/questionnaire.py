@@ -15,16 +15,18 @@ def _parse_options(text: str) -> tuple[str, list[Option]]:
     options = []
     question_text = text
 
-    question_match = re.search(r'QUESTION:\s*(.+?)(?=OPTIONS:|$)', text, re.DOTALL)
-    if question_match:
-        question_text = question_match.group(1).strip()
-
     options_match = re.search(r'OPTIONS:\s*(.+?)(?=\n\n|$)', text, re.DOTALL)
     if options_match:
         for idx, line in enumerate(options_match.group(1).strip().split('\n')):
             label = re.sub(r'^[-•*\d.]\s*', '', line.strip()).strip()
             if label:
                 options.append({"id": str(idx + 1), "label": label})
+        # Strip everything from OPTIONS: onward from the displayed message
+        question_text = text[:options_match.start()].strip()
+
+    question_match = re.search(r'QUESTION:\s*(.+)', question_text, re.DOTALL)
+    if question_match:
+        question_text = question_match.group(1).strip()
 
     return question_text, options
 
@@ -36,6 +38,8 @@ def questionnaire_node(state: GraphState) -> dict:
         provider=config.planner_provider,
         base_url=config.ollama_base_url,
         model=config.ollama_planner_model,
+        repeat_penalty=1.12,
+        frequency_penalty=0.05,
     )
 
     lc_messages: list = [SystemMessage(content=QUESTIONNAIRE_SYSTEM)]

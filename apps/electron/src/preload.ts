@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('database', {
   getProject: (id: string) => ipcRenderer.invoke('db:get-project', id),
   updateConversation: (id: string, conversation: string) => 
     ipcRenderer.invoke('db:update-conversation', id, conversation),
+  updateSectionPlan: (id: string, sectionPlan: string) =>
+    ipcRenderer.invoke('db:update-section-plan', id, sectionPlan),
   deleteProject: (id: string) => ipcRenderer.invoke('db:delete-project', id),
   resetProject: (id: string) => ipcRenderer.invoke('db:reset-project', id),
   renameProject: (id: string, name: string) => ipcRenderer.invoke('db:rename-project', id, name),

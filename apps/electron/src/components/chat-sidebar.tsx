@@ -64,6 +64,10 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
           const lastMsg = messages[messages.length - 1];
           if (lastMsg?.role === "assistant" && lastMsg.content.includes("Generated") && lastMsg.content.includes("components successfully")) {
             onStatusChange("done");
+            if (project.section_plan) {
+              setSectionPlan(JSON.parse(project.section_plan));
+              setShowPlanEditor(true);
+            }
           }
         }
       }
@@ -168,19 +172,14 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
     onStatusChange("generating");
 
     try {
-      // Update plan if edited
       if (JSON.stringify(updatedPlan) !== JSON.stringify(sectionPlan)) {
         await landingPageApi.updatePlan(sessionId, updatedPlan);
         setSectionPlan(updatedPlan);
       }
 
-      // Approve and generate
       const response = await landingPageApi.approvePlan(sessionId);
 
-      if (
-        response.preview_components &&
-        response.preview_components.length > 0
-      ) {
+      if (response.preview_components && response.preview_components.length > 0) {
         const successMessage = {
           role: "assistant" as const,
           content: `✅ Generated ${response.preview_components.length} components successfully!`,
@@ -188,21 +187,29 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
         const updatedMessages = [...messages, successMessage];
         setMessages(updatedMessages);
         await saveConversation(updatedMessages);
+        await window.database.updateSectionPlan(projectId, JSON.stringify(updatedPlan));
         onStatusChange("done");
+        setShowPlanEditor(true); // keep plan visible after generation
       }
     } catch (error) {
       console.error("Failed to approve plan:", error);
       onStatusChange("waiting_approval");
+      setShowPlanEditor(true);
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, there was an error generating code. Please try again.",
-        },
+        { role: "assistant", content: "Sorry, there was an error generating code. Please try again." },
       ]);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRegenerateSection = async (section: any) => {
+    try {
+      await landingPageApi.regenerateSection(projectId, sessionId, section);
+      onStatusChange("done");
+    } catch (error) {
+      console.error("Failed to regenerate section:", error);
     }
   };
 
@@ -267,6 +274,8 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
                     plan={sectionPlan}
                     onApprove={handleApprovePlan}
                     isGenerating={isGenerating}
+                    isDone={isDone}
+                    onRegenerateSection={isDone ? handleRegenerateSection : undefined}
                   />
                 </div>
               )}

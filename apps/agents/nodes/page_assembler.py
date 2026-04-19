@@ -174,7 +174,6 @@ def page_assembler_node(state: GraphState) -> dict:
         code = _remove_hallucinated_imports(code)
         code = _normalize_react_icons(code)
         code = _fix_next_image(code)
-        code = _fix_duplicate_exports(code)
         code = _ensure_use_client(code)
 
         (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")

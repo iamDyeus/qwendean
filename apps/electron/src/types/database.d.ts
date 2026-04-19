@@ -2,6 +2,7 @@ export interface Project {
   id: string;
   name: string;
   conversation: string;
+  section_plan: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -11,6 +12,7 @@ export interface DatabaseAPI {
   getAllProjects: () => Promise<Project[]>;
   getProject: (id: string) => Promise<Project | undefined>;
   updateConversation: (id: string, conversation: string) => Promise<void>;
+  updateSectionPlan: (id: string, sectionPlan: string) => Promise<void>;
   deleteProject: (id: string) => Promise<void>;
   resetProject: (id: string) => Promise<void>;
   renameProject: (id: string, name: string) => Promise<void>;

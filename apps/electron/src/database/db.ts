@@ -8,6 +8,7 @@ export interface Project {
   id: string;
   name: string;
   conversation: string; // JSON stringified conversation
+  section_plan: string | null; // JSON stringified section plan
   created_at: string;
   updated_at: string;
 }
@@ -26,10 +27,13 @@ export function initDatabase() {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       conversation TEXT DEFAULT '[]',
+      section_plan TEXT DEFAULT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
   `);
+  // Migrate existing DBs that don't have section_plan column
+  try { db.exec(`ALTER TABLE projects ADD COLUMN section_plan TEXT DEFAULT NULL`); } catch { /* already exists */ }
   
   return db;
 }
@@ -57,6 +61,7 @@ export function createProject(name: string): Project {
     id,
     name,
     conversation: '[]',
+    section_plan: null,
     created_at: now,
     updated_at: now,
   };
@@ -77,14 +82,15 @@ export function getProject(id: string): Project | undefined {
 export function updateProjectConversation(id: string, conversation: string): void {
   const db = getDatabase();
   const now = new Date().toISOString();
-  
-  const stmt = db.prepare(`
-    UPDATE projects 
-    SET conversation = ?, updated_at = ?
-    WHERE id = ?
-  `);
-  
+  const stmt = db.prepare(`UPDATE projects SET conversation = ?, updated_at = ? WHERE id = ?`);
   stmt.run(conversation, now, id);
+}
+
+export function updateProjectSectionPlan(id: string, sectionPlan: string): void {
+  const db = getDatabase();
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`UPDATE projects SET section_plan = ?, updated_at = ? WHERE id = ?`);
+  stmt.run(sectionPlan, now, id);
 }
 
 export function resetProject(id: string): void {
@@ -106,7 +112,12 @@ export function deleteProject(id: string): void {
 
   for (const dir of [TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR]) {
     const buildPath = path.join(dir, id);
-    if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+    try {
+      if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+    } catch {
+      // On Windows, retry once after a short delay for locked handles
+      try { fs.rmSync(buildPath, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
   }
 }
 

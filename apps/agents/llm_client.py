@@ -24,11 +24,18 @@ def build_chat_model(config: LLMConfig, provider: str = "huggingface", **overrid
             kwargs["top_k"] = top_k
         if min_p is not None:
             kwargs["min_p"] = min_p
+        repeat_penalty = overrides.get("repeat_penalty", config.repeat_penalty if hasattr(config, "repeat_penalty") else None)
+        if repeat_penalty is not None:
+            kwargs["repeat_penalty"] = repeat_penalty
+        frequency_penalty = overrides.get("frequency_penalty", None)
+        if frequency_penalty is not None:
+            kwargs["frequency_penalty"] = frequency_penalty
 
         return ChatOllama(
             base_url=overrides.get("base_url", "http://localhost:11434"),
             model=overrides.get("model", config.model),
             temperature=temperature,
+            think=False,
             **kwargs,
         )
     
