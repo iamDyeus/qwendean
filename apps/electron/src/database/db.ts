@@ -101,7 +101,11 @@ export function resetProject(id: string): void {
 
   for (const dir of [TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR]) {
     const buildPath = path.join(dir, id);
-    if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+    try {
+      if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+    } catch {
+      try { fs.rmSync(buildPath, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
   }
 }
 

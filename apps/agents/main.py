@@ -242,6 +242,7 @@ async def regenerate_section(request: RegenerateSectionRequest):
     return {"file_name": section.file_name, "component_name": name, "code": code}
 
 
+@app.get("/api/health")
 async def health():
     import httpx
     from config import load_config
@@ -254,6 +255,67 @@ async def health():
     except Exception:
         pass
     return {"status": "ok", "ollama": "reachable" if ollama_ok else "unreachable"}
+
+
+class IgnoreErrorsRequest(BaseModel):
+    project_id: str
+    file_name: str  # e.g. "hero-section.tsx"
+    error_message: str = ""
+
+
+@app.post("/api/ignore-errors")
+async def ignore_errors(request: IgnoreErrorsRequest):
+    import re, shutil
+    from pathlib import Path
+    from config import load_config
+
+    config = load_config()
+    file_path = config.output_dir / request.project_id / "components" / request.file_name
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"{request.file_name} not found")
+
+    code = file_path.read_text(encoding="utf-8")
+    
+    # Find what name page.tsx imports from this file — that's the name we must export
+    page_path = config.output_dir / request.project_id / "page.tsx"
+    component_name = None
+    if page_path.exists():
+        page_code = page_path.read_text(encoding="utf-8")
+        stem = file_path.stem  # e.g. "ethnic-wear"
+        m = re.search(rf'import\s*\{{\s*(\w+)\s*(?:as\s+\w+)?\s*\}}\s*from\s*["\']./components/{re.escape(stem)}["\']', page_code)
+        if m:
+            component_name = m.group(1)
+    
+    if not component_name:
+        m = re.search(r'function\s+([A-Z]\w*)\s*\(', code)
+        component_name = m.group(1) if m else "".join(
+            w.capitalize() for w in file_path.stem.replace("-", "_").split("_")
+        )
+
+    error_note = f"Error: {request.error_message}" if request.error_message else "An error occurred during generation."
+    fallback = f'''"use client";
+
+function {component_name}() {{
+  return (
+    <section style={{{{ padding: "2rem", background: "#1a1a1a", color: "#f87171", fontFamily: "monospace", textAlign: "center" }}}}>
+      <p style={{{{ marginBottom: "0.5rem", fontWeight: "bold" }}}}>⚠️ {request.file_name} failed to render</p>
+      <p style={{{{ fontSize: "0.85rem", color: "#9ca3af" }}}}>{error_note}</p>
+      <p style={{{{ fontSize: "0.85rem", color: "#9ca3af", marginTop: "0.5rem" }}}}>Open the plan editor, update the prompt for this section and click Regenerate.</p>
+    </section>
+  );
+}}
+
+export {{ {component_name} }};
+'''
+    file_path.write_text(fallback, encoding="utf-8")
+
+    # Clear Next.js copy cache so it picks up the fixed file on next request
+    cached = config.output_dir.parent / "app" / "builds" / "[buildId]" / request.project_id
+    if cached.exists():
+        shutil.rmtree(str(cached), ignore_errors=True)
+
+    return {"replaced": request.file_name, "component_name": component_name}
 
 
 if __name__ == "__main__":

@@ -97,7 +97,7 @@ SECTION_PLANNER_SYSTEM = """\
 Role: Landing page architect. Convert user requirements into detailed section specifications.
 
 AVAILABLE SHADCN COMPONENTS:
-accordion, alert, alert-dialog, aspect-ratio, avatar, badge, breadcrumb, button, 
+accordion, alert, alert-dialog, avatar, badge, breadcrumb, button, 
 button-group, calendar, card, carousel, chart, checkbox, collapsible, combobox, 
 command, context-menu, dialog, drawer, dropdown-menu, field, form, hover-card, 
 input, input-group, input-otp, kbd, label, menubar, native-select, navigation-menu, 
@@ -151,7 +151,7 @@ Task: Generate one section component for a Next.js landing page using React Type
 
 AVAILABLE SHADCN COMPONENTS:
 Import from "@/components/ui/<component-name>" ONLY — no other import paths for UI components:
-accordion, alert, alert-dialog, aspect-ratio, avatar, badge, breadcrumb, button, 
+accordion, alert, alert-dialog, avatar, badge, breadcrumb, button, 
 button-group, calendar, card, carousel, chart, checkbox, collapsible, combobox, 
 command, context-menu, dialog, drawer, dropdown-menu, field, form, hover-card, 
 input, input-group, input-otp, kbd, label, menubar, native-select, navigation-menu, 

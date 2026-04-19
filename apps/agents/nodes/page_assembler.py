@@ -102,6 +102,10 @@ def _remove_hallucinated_imports(code: str) -> str:
     lines = code.splitlines()
     cleaned = []
     for line in lines:
+        # Fix hallucinated lucide-react package names
+        if re.search(r'from\s+["\'][^"\']*lucide[^"\']*["\']', line) and 'lucide-react' not in line:
+            line = re.sub(r'from\s+["\'][^"\']*lucide[^"\']*["\']', 'from "lucide-react"', line)
+        # Remove bad @/ imports
         m = re.match(r'^import\s+.*\s+from\s+["\'](@/[^"\']+)["\']', line)
         if m:
             path = m.group(1)
@@ -158,6 +162,7 @@ def page_assembler_node(state: GraphState) -> dict:
     component_lookup = {c.file_name: c for c in generated}
     import_lines: list[str] = []
     jsx_lines: list[str] = []
+    used_aliases: set[str] = set()
 
     for section in plan.sections:
         comp = component_lookup.get(section.file_name)
@@ -177,15 +182,22 @@ def page_assembler_node(state: GraphState) -> dict:
         code = _ensure_use_client(code)
 
         (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
-        import_lines.append(f'import {{ {name} as {section.component_name} }} from "./components/{section.file_name}";')
-        jsx_lines.append(f"      <{section.component_name} />")
+
+        # Guarantee a unique alias using the file stem (always unique per section)
+        alias = "".join(w.capitalize() for w in section.file_name.replace("-", "_").split("_"))
+        if alias in used_aliases:
+            alias = alias + str(len(used_aliases))
+        used_aliases.add(alias)
+
+        import_lines.append(f'import {{ {name} as {alias} }} from "./components/{section.file_name}";')
+        jsx_lines.append(f"      <{alias} />")
 
     if not import_lines:
         return {"error": "No components were assembled"}
 
     page = (
         "\n".join(import_lines)
-        + '\n\nconst LandingPage = () => (\n  <div className="min-h-screen flex flex-col items-center">\n'
+        + '\n\nconst LandingPage = () => (\n  <div className="min-h-screen flex flex-col">\n'
         + "\n".join(jsx_lines)
         + "\n  </div>\n);\n\nexport default LandingPage;\n"
     )

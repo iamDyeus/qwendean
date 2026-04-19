@@ -15,10 +15,11 @@ interface ChatSidebarProps {
   projectId: string;
   projectName: string;
   onStatusChange: (status: GenerationStatus) => void;
+  onPlanChange?: (plan: { sections: any[] }) => void;
   resetRef: MutableRefObject<() => void>;
 }
 
-export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }: ChatSidebarProps) {
+export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChange, resetRef }: ChatSidebarProps) {
   const sessionId = projectId;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -28,6 +29,11 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
   const [sectionPlan, setSectionPlan] = useState<any>(null);
   const [showPlanEditor, setShowPlanEditor] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const updatePlan = (plan: any) => {
+    setSectionPlan(plan);
+    if (plan) onPlanChange?.(plan);
+  };
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const isDone = messages.at(-1)?.content?.includes("components successfully") ?? false;
@@ -65,7 +71,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
           if (lastMsg?.role === "assistant" && lastMsg.content.includes("Generated") && lastMsg.content.includes("components successfully")) {
             onStatusChange("done");
             if (project.section_plan) {
-              setSectionPlan(JSON.parse(project.section_plan));
+              updatePlan(JSON.parse(project.section_plan));
               setShowPlanEditor(true);
             }
           }
@@ -113,7 +119,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
       await saveConversation(response.messages);
 
       if (response.section_plan) {
-        setSectionPlan(response.section_plan);
+        updatePlan(response.section_plan);
         onStatusChange("waiting_approval");
         if (!response.options || response.options.length === 0) {
           setShowPlanEditor(true);
@@ -148,7 +154,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
       await saveConversation(response.messages);
 
       if (response.section_plan) {
-        setSectionPlan(response.section_plan);
+        updatePlan(response.section_plan);
         onStatusChange("waiting_approval");
         if (!response.options || response.options.length === 0) {
           setShowPlanEditor(true);
@@ -174,7 +180,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
     try {
       if (JSON.stringify(updatedPlan) !== JSON.stringify(sectionPlan)) {
         await landingPageApi.updatePlan(sessionId, updatedPlan);
-        setSectionPlan(updatedPlan);
+        updatePlan(updatedPlan);
       }
 
       const response = await landingPageApi.approvePlan(sessionId);

@@ -89,7 +89,10 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground overflow-hidden font-sans antialiased;
+    @apply bg-background text-foreground overflow-hidden font-sans antialiased h-screen;
+  }
+  #app {
+    @apply h-full flex flex-col;
   }
   html {
     @apply font-sans;

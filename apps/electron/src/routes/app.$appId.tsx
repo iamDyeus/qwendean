@@ -16,11 +16,18 @@ function AppChatPage() {
   const { appId } = Route.useParams();
   const [generationStatus, setGenerationStatus] = useState<GenerationStatus>("idle");
   const [projectName, setProjectName] = useState<string>("");
+  const [componentFiles, setComponentFiles] = useState<string[]>([]);
   const resetRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     window.database.getProject(appId).then((p) => {
-      if (p) setProjectName(p.name);
+      if (p) {
+        setProjectName(p.name);
+        if (p.section_plan) {
+          const plan = JSON.parse(p.section_plan);
+          setComponentFiles(plan.sections.map((s: any) => `${s.file_name}.tsx`));
+        }
+      }
     });
   }, [appId]);
 
@@ -34,6 +41,7 @@ function AppChatPage() {
       console.error('Reset error:', error);
     } finally {
       setGenerationStatus("idle");
+      setComponentFiles([]);
       resetRef.current();
     }
   };
@@ -49,9 +57,10 @@ function AppChatPage() {
           projectId={appId}
           projectName={projectName}
           onStatusChange={setGenerationStatus}
+          onPlanChange={(plan) => setComponentFiles(plan.sections.map((s: any) => `${s.file_name}.tsx`))}
           resetRef={resetRef}
         />
-        <PreviewWindow projectId={appId} status={generationStatus} />
+        <PreviewWindow projectId={appId} status={generationStatus} componentFiles={componentFiles} />
       </div>
     </SidebarProvider>
   );

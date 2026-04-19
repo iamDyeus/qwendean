@@ -7,11 +7,11 @@ export default function BaseLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="flex flex-col h-full">
       <DragWindowRegion title="Без капиталистических багов ☭" /> {/* No capitalist bugs; lol */} 
       <div className="flex-1 overflow-hidden">
         {children}
       </div>
-    </>
+    </div>
   );
 }
