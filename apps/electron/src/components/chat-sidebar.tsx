@@ -30,6 +30,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
   const [isGenerating, setIsGenerating] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isDone = messages.at(-1)?.content?.includes("components successfully") ?? false;
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -285,6 +286,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
         </div>
       </SidebarContent>
 
+      {!isDone && (
       <SidebarFooter className="mr-0 pr-0 mb-19">
         <div className="flex flex-col gap-2 rounded-lg bg-zinc-900 p-4 border border-zinc-800">
           {options.length > 0 && !showPlanEditor && (
@@ -353,6 +355,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, resetRef }
           )}
         </div>
       </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

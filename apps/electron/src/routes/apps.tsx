@@ -22,6 +22,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { generateGradientSVG } from "@/lib/gradient";
+import qwendeanLogo from "../../images/qwendean-light.svg";
 
 interface Project {
   id: string;
@@ -201,10 +202,15 @@ function AppsPage() {
                     <Link to="/app/$appId" params={{ appId: project.id }}>
                       <Card className="cursor-pointer py-0 pt-4 pb-6 transition-colors hover:bg-accent group/card overflow-hidden">
                         <div className="px-4 pt-0">
-                          <div
-                            className="h-40 w-full rounded-md overflow-hidden"
-                            dangerouslySetInnerHTML={{ __html: generateGradientSVG(Number(project.id)) }}
-                          />
+                          <div className="relative h-40 w-full rounded-md overflow-hidden">
+                            <div
+                              className="absolute inset-0"
+                              dangerouslySetInnerHTML={{ __html: generateGradientSVG(Number(project.id)) }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <img src="../../images/qwendean-light.svg" alt="Qwendean" className="h-12 w-auto opacity-90" />
+                            </div>
+                          </div>
                         </div>
                         <CardHeader>
                           <CardTitle>{project.name}</CardTitle>

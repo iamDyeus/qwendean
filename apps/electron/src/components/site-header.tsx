@@ -2,7 +2,8 @@
 
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { Settings, Plus, RotateCcw } from "lucide-react"
+import { Settings, Plus, RotateCcw, ChevronRight } from "lucide-react"
+import qwendeanLogo from "../../images/qwendean-light.svg"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -38,12 +39,12 @@ export function SiteHeader({ projectName, onReset }: { projectName?: string; onR
         <SidebarTrigger className="h-8 w-8" />
         <Separator orientation="vertical" className="mr-2 h-4" />
         
-        <div className="flex items-center gap-1 text-sm">
-          <Link to="/apps" className="hover:underline">
-            My Apps
+        <div className="flex items-center gap-3 text-sm">
+          <Link to="/apps" className="hover:opacity-80 transition-opacity">
+            <img src={qwendeanLogo} alt="My Apps" className="h-4 w-auto" />
           </Link>
-          <span className="text-muted-foreground">/</span>
-          <span className="font-semibold">{projectName || "..."}</span>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <span className="font-semibold text-base">{projectName || "..."}</span>
         </div>
 
         <div className="flex-1" />
