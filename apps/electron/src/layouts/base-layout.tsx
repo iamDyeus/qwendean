@@ -8,7 +8,7 @@ export default function BaseLayout({
 }) {
   return (
     <>
-      <DragWindowRegion title="qwendean" />
+      <DragWindowRegion title="Без капиталистических багов ☭" /> {/* No capitalist bugs; lol */} 
       <div className="flex-1 overflow-hidden">
         {children}
       </div>
