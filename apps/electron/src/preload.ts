@@ -29,3 +29,13 @@ contextBridge.exposeInMainWorld('electron', {
   closePreviewWindow: () => ipcRenderer.invoke('preview:close-window'),
   reloadPreview: () => ipcRenderer.invoke('preview:reload'),
 });
+
+// Expose settings API to renderer
+contextBridge.exposeInMainWorld('settings', {
+  pingServers: () => ipcRenderer.invoke('settings:ping-servers'),
+  stopServers: () => ipcRenderer.invoke('settings:stop-servers'),
+  restartServers: () => ipcRenderer.invoke('settings:restart-servers'),
+  clearUserData: () => ipcRenderer.invoke('settings:clear-user-data'),
+  listOllamaModels: () => ipcRenderer.invoke('settings:list-ollama-models'),
+  clearNextCache: () => ipcRenderer.invoke('settings:clear-next-cache'),
+});

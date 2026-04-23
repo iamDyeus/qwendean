@@ -26,6 +26,7 @@ function AppChatPage() {
         if (p.section_plan) {
           const plan = JSON.parse(p.section_plan);
           setComponentFiles(plan.sections.map((s: any) => `${s.file_name}.tsx`));
+          setGenerationStatus("done");
         }
       }
     });

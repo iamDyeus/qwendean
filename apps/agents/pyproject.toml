@@ -20,3 +20,6 @@ dependencies = [
 [project.scripts]
 dev = "uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 start = "uvicorn main:app --host 0.0.0.0 --port 8000"
+
+[tool.scripts]
+build = "pyinstaller agents.spec --distpath dist --workpath build/pyinstaller --clean"

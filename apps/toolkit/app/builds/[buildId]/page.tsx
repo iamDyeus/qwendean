@@ -3,8 +3,10 @@ import { promises as fs } from "fs";
 import path from "path";
 import type React from "react";
 
-const BUILDS_DIR = path.join(process.cwd(), "builds");
-const APP_BUILDS_DIR = path.join(process.cwd(), "app", "builds", "[buildId]");
+export const dynamic = 'force-dynamic';
+
+const BUILDS_DIR = process.env.BUILDS_DIR ?? path.join(process.cwd(), "builds");
+const APP_BUILDS_DIR = process.env.APP_BUILDS_DIR ?? path.join(process.cwd(), "app", "builds", "[buildId]");
 
 async function copyDir(src: string, dest: string) {
   await fs.mkdir(dest, { recursive: true });
@@ -34,11 +36,8 @@ export default async function BuildPage({
     notFound();
   }
 
-  // Always copy — ensures files exist before webpack resolves the import
   await copyDir(sourcePath, destPath);
 
-  // On first request webpack may not have registered the newly copied files yet.
-  // Wait briefly and retry once to let the file watcher catch up.
   let PageComponent: React.ComponentType;
   try {
     ({ default: PageComponent } = await import(`./${buildId}/page`));

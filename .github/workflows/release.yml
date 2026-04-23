@@ -1,0 +1,96 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-agents:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            binary: agents.exe
+          - os: ubuntu-latest
+            binary: agents
+          - os: macos-latest
+            binary: agents
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        working-directory: apps/agents
+        run: uv sync
+
+      - name: Build agents binary
+        working-directory: apps/agents
+        run: uv run pyinstaller agents.spec --distpath dist --workpath build/pyinstaller --clean
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agents-binary-${{ matrix.os }}
+          path: apps/agents/dist/${{ matrix.binary }}
+
+  build-electron:
+    needs: build-agents
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            agents-artifact: agents-binary-windows-latest
+            agents-binary: agents.exe
+          - os: ubuntu-latest
+            agents-artifact: agents-binary-ubuntu-latest
+            agents-binary: agents
+          - os: macos-latest
+            agents-artifact: agents-binary-macos-latest
+            agents-binary: agents
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install toolkit deps
+        working-directory: apps/toolkit
+        run: pnpm install --shamefully-hoist
+
+      - name: Install electron deps
+        working-directory: apps/electron
+        run: npm install
+
+      - name: Download agents binary
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.agents-artifact }}
+          path: apps/agents/dist
+
+      - name: Make executable (non-Windows)
+        if: matrix.os != 'windows-latest'
+        run: chmod +x apps/agents/dist/${{ matrix.agents-binary }}
+
+      - name: Make electron app
+        working-directory: apps/electron
+        run: npm run make
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: apps/electron/out/make/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

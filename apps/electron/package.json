@@ -1,8 +1,8 @@
 {
-  "name": "electron-shadcn",
+  "name": "qwendean",
+  "version": "0.1.0",
   "productName": "Qwendean",
-  "version": "1.4.0",
-  "description": "Electron Forge with shadcn-ui (Vite + Typescript)",
+  "description": "AI-powered landing page generator — describe your idea, get production-ready code.",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
@@ -34,8 +34,10 @@
     "better-sqlite3": "^12.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "electron-log": "^5.4.3",
     "electron-squirrel-startup": "^1.0.1",
     "i18next": "^25.10.5",
+    "kill-port": "^2.0.1",
     "lucide-react": "^1.7.0",
     "radix-ui": "^1.4.3",
     "react": "^19.2.4",

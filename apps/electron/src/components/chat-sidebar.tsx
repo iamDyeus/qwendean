@@ -178,12 +178,17 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
     onStatusChange("generating");
 
     try {
-      if (JSON.stringify(updatedPlan) !== JSON.stringify(sectionPlan)) {
-        await landingPageApi.updatePlan(sessionId, updatedPlan);
-        updatePlan(updatedPlan);
-      }
+      updatePlan(updatedPlan);
 
-      const response = await landingPageApi.approvePlan(sessionId);
+      // Use direct generation if no real session (e.g. dev plan)
+      const response = hasStarted && messages.length > 0
+        ? await (async () => {
+            if (JSON.stringify(updatedPlan) !== JSON.stringify(sectionPlan)) {
+              await landingPageApi.updatePlan(sessionId, updatedPlan);
+            }
+            return landingPageApi.approvePlan(sessionId);
+          })()
+        : await landingPageApi.generateFromPlan(projectId, updatedPlan);
 
       if (response.preview_components && response.preview_components.length > 0) {
         const successMessage = {
@@ -195,7 +200,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
         await saveConversation(updatedMessages);
         await window.database.updateSectionPlan(projectId, JSON.stringify(updatedPlan));
         onStatusChange("done");
-        setShowPlanEditor(true); // keep plan visible after generation
+        setShowPlanEditor(true);
       }
     } catch (error) {
       console.error("Failed to approve plan:", error);
@@ -213,10 +218,37 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
   const handleRegenerateSection = async (section: any) => {
     try {
       await landingPageApi.regenerateSection(projectId, sessionId, section);
-      onStatusChange("done");
+      // Trigger preview reload by briefly toggling status
+      onStatusChange("generating");
+      setTimeout(() => onStatusChange("done"), 500);
     } catch (error) {
       console.error("Failed to regenerate section:", error);
+      throw error; // re-throw so plan-editor can show error state
     }
+  };
+
+  const handleRegenerateAll = async () => {
+    if (!sectionPlan) return;
+    for (const section of sectionPlan.sections) {
+      await handleRegenerateSection(section);
+    }
+  };
+
+  const DEV_PLAN = {
+    sections: [
+      { section_name: "Navbar", category: "navbar", prompt: "A sticky navbar with logo on the left, navigation links in the center, and a CTA button on the right. Full width, blur background on scroll.", component_name: "Navbar", file_name: "navbar", priority: 1 },
+      { section_name: "Hero Section", category: "hero", prompt: "A full-height hero section with a bold headline, subheading, and two CTA buttons side by side. Dark background with a subtle gradient overlay.", component_name: "HeroSection", file_name: "hero-section", priority: 1 },
+      { section_name: "Features", category: "feature", prompt: "A 3-column grid of feature cards, each with a lucide-react icon, title, and description. Centered heading above the grid.", component_name: "Features", file_name: "features", priority: 2 },
+      { section_name: "CTA Section", category: "cta", prompt: "A full-width CTA banner with a headline, short description, and a primary button. Contrasting background color.", component_name: "CTASection", file_name: "cta-section", priority: 2 },
+      { section_name: "Footer", category: "footer", prompt: "A simple footer with logo on the left, navigation links in the center, and social icons on the right. Full width, dark background.", component_name: "Footer", file_name: "footer", priority: 1 },
+    ]
+  };
+
+  const handleDevPlan = () => {
+    updatePlan(DEV_PLAN);
+    setShowPlanEditor(true);
+    setHasStarted(true);
+    onStatusChange("waiting_approval");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -282,6 +314,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
                     isGenerating={isGenerating}
                     isDone={isDone}
                     onRegenerateSection={isDone ? handleRegenerateSection : undefined}
+                    onRegenerateAll={isDone ? handleRegenerateAll : undefined}
                   />
                 </div>
               )}
@@ -343,7 +376,13 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
                 className="flex-1 min-h-12 w-full resize-none rounded bg-transparent border-0 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus-visible:ring-0"
               />
 
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                {!hasStarted && (
+                  <Button variant="ghost" size="sm" onClick={handleDevPlan} className="text-xs text-zinc-500 hover:text-zinc-300 gap-1">
+                    ⚡ Dev Plan
+                  </Button>
+                )}
+                <div className="ml-auto">
                 <Button
                   size="icon"
                   onClick={
@@ -365,6 +404,7 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
                     <ArrowUp className="h-4 w-4" />
                   )}
                 </Button>
+              </div>
               </div>
             </>
           )}

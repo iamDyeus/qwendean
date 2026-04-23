@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RotateCw, AlertTriangle } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import type { GenerationStatus } from "@/routes/app.$appId";
 import { landingPageApi } from "@/lib/api";
 import loaderGif from "../../images/qwendean-animated.gif";
@@ -28,6 +28,24 @@ export function PreviewWindow({ projectId, status, componentFiles }: PreviewWind
   const [selectedFile, setSelectedFile] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [ignoring, setIgnoring] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
+
+  // Poll until the toolkit dev server is up via IPC (main process has no CORS restrictions)
+  useEffect(() => {
+    if (status !== "done") return;
+    let cancelled = false;
+    const check = async () => {
+      while (!cancelled) {
+        try {
+          const result = await window.settings.pingServers();
+          if (result.toolkit) { setServerReady(true); return; }
+        } catch { /* not ready */ }
+        await new Promise(r => setTimeout(r, 1500));
+      }
+    };
+    check();
+    return () => { cancelled = true; };
+  }, [status]);
 
   const handleReload = () => webviewRef.current?.reload();
 
@@ -39,7 +57,24 @@ export function PreviewWindow({ projectId, status, componentFiles }: PreviewWind
       setDialogOpen(false);
       setSelectedFile("");
       setErrorMessage("");
-      setTimeout(() => webviewRef.current?.reload(), 300);
+      // Restart toolkit server so webpack starts fresh without the cached error
+      setServerReady(false);
+      await window.settings.restartServers();
+      // Wait for toolkit to come back up, then reload
+      const poll = async () => {
+        // Brief delay to let the old server fully shut down before polling
+        await new Promise(r => setTimeout(r, 2000));
+        while (true) {
+          try {
+            const result = await window.settings.pingServers();
+            if (result.toolkit) break;
+          } catch { /* not ready */ }
+          await new Promise(r => setTimeout(r, 1500));
+        }
+        setServerReady(true);
+        setTimeout(() => webviewRef.current?.reload(), 300);
+      };
+      poll();
     } catch (e) {
       console.error("Failed to ignore errors:", e);
     } finally {
@@ -59,6 +94,12 @@ export function PreviewWindow({ projectId, status, componentFiles }: PreviewWind
 
   return (
     <div className="flex-1 flex flex-col bg-muted relative">
+      {!serverReady && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-20 bg-muted">
+          <img src={loaderGif} alt="Loading" className="size-24" />
+          <p className="text-muted-foreground text-sm">Starting preview server...</p>
+        </div>
+      )}
       <div className="absolute top-4 right-4 z-10 flex gap-2">
         {componentFiles.length > 0 && (
           <Button onClick={() => setDialogOpen(true)} variant="outline" size="sm" className="gap-2">

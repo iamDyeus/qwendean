@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, ArrowRight } from "lucide-react";
+import { Plus, ArrowRight, Settings, RefreshCw, Trash2, Server } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { generateGradientSVG } from "@/lib/gradient";
 import qwendeanLogo from "../../images/qwendean-light.svg";
 
@@ -40,6 +42,47 @@ function AppsPage() {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Settings state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pingResult, setPingResult] = useState<{ agents: boolean; toolkit: boolean } | null>(null);
+  const [pinging, setPinging] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [ollamaError, setOllamaError] = useState<string>("");
+  const [loadingModels, setLoadingModels] = useState(false);
+
+  const handlePingServers = async () => {
+    setPinging(true);
+    const result = await window.settings.pingServers();
+    setPingResult(result);
+    setPinging(false);
+  };
+
+  const handleRestartServers = async () => {
+    setRestarting(true);
+    await window.settings.restartServers();
+    setRestarting(false);
+    setPingResult(null);
+  };
+
+  const handleClearData = async () => {
+    setClearing(true);
+    await window.settings.clearUserData();
+    setClearing(false);
+    setSettingsOpen(false);
+    loadProjects();
+  };
+
+  const handleListModels = async () => {
+    setLoadingModels(true);
+    const result = await window.settings.listOllamaModels();
+    setOllamaModels(result.models);
+    setOllamaError(result.error ?? "");
+    setLoadingModels(false);
+  };
 
   useEffect(() => {
     loadProjects();
@@ -113,13 +156,96 @@ function AppsPage() {
             <p className="text-muted-foreground">Create and manage your landing pages</p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New App
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            {/* Settings button */}
+            <Dialog open={settingsOpen} onOpenChange={(open) => { setSettingsOpen(open); if (!open) { setPingResult(null); setOllamaModels([]); setOllamaError(""); } }}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Settings</DialogTitle>
+                  <DialogDescription>Manage servers and application data</DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-5 py-2">
+                  {/* Server controls */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Server className="h-4 w-4" />
+                      Servers
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handlePingServers} disabled={pinging} className="flex-1">
+                        {pinging ? "Pinging..." : "Ping Servers"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={async () => { await window.settings.stopServers(); setPingResult(null); }} className="flex-1">
+                        Stop
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleRestartServers} disabled={restarting} className="flex-1 gap-1">
+                        <RefreshCw className="h-3 w-3" />
+                        {restarting ? "Restarting..." : "Restart Servers"}
+                      </Button>
+                    </div>
+                    {pingResult && (
+                      <div className="flex gap-2">
+                        <Badge variant={pingResult.agents ? "default" : "destructive"}>
+                          Agents: {pingResult.agents ? "Online" : "Offline"}
+                        </Badge>
+                        <Badge variant={pingResult.toolkit ? "default" : "destructive"}>
+                          Toolkit: {pingResult.toolkit ? "Online" : "Offline"}
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Ollama models */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Ollama Models</p>
+                    <Button variant="outline" size="sm" onClick={handleListModels} disabled={loadingModels}>
+                      {loadingModels ? "Loading..." : "List Active Models"}
+                    </Button>
+                    {ollamaError && <p className="text-xs text-destructive">{ollamaError}</p>}
+                    {ollamaModels.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {ollamaModels.map((m) => <Badge key={m} variant="secondary">{m}</Badge>)}
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Clear data */}
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Data</p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={async () => { setClearingCache(true); await window.settings.clearNextCache(); setClearingCache(false); }} disabled={clearingCache} className="gap-1">
+                        <RefreshCw className={`h-3 w-3 ${clearingCache ? 'animate-spin' : ''}`} />
+                        {clearingCache ? "Clearing..." : "Clear Next Cache"}
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={handleClearData} disabled={clearing} className="gap-1">
+                        <Trash2 className="h-3 w-3" />
+                        {clearing ? "Clearing..." : "Clear All User Data"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Deletes all projects, conversations, and build files.</p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* New App button */}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New App
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Create New App</DialogTitle>
@@ -143,6 +269,7 @@ function AppsPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Delete confirmation dialog */}
@@ -209,7 +336,7 @@ function AppsPage() {
                               dangerouslySetInnerHTML={{ __html: generateGradientSVG(Number(project.id)) }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <img src="../../images/qwendean-light.svg" alt="Qwendean" className="h-12 w-auto opacity-90" />
+                              <img src={qwendeanLogo} alt="Qwendean" className="h-12 w-auto opacity-90" />
                             </div>
                           </div>
                         </div>

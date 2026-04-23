@@ -2,7 +2,19 @@ import Database from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR } from '../constants';
+import { inDevelopment, PROJECT_ROOT } from '../constants';
+
+function getToolkitBuildsDir(): string {
+  return inDevelopment
+    ? path.join(PROJECT_ROOT, "apps", "toolkit", "builds")
+    : path.join(app.getPath("userData"), "builds");
+}
+
+function getToolkitAppBuildsDir(): string {
+  return inDevelopment
+    ? path.join(PROJECT_ROOT, "apps", "toolkit", "app", "builds", "[buildId]")
+    : path.join(app.getPath("userData"), "toolkit", "app", "builds", "[buildId]");
+}
 
 export interface Project {
   id: string;
@@ -99,7 +111,7 @@ export function resetProject(id: string): void {
   const stmt = db.prepare(`UPDATE projects SET conversation = '[]', updated_at = ? WHERE id = ?`);
   stmt.run(now, id);
 
-  for (const dir of [TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR]) {
+  for (const dir of [getToolkitBuildsDir(), getToolkitAppBuildsDir()]) {
     const buildPath = path.join(dir, id);
     try {
       if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
@@ -114,7 +126,7 @@ export function deleteProject(id: string): void {
   const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
   stmt.run(id);
 
-  for (const dir of [TOOLKIT_BUILDS_DIR, TOOLKIT_APP_BUILDS_DIR]) {
+  for (const dir of [getToolkitBuildsDir(), getToolkitAppBuildsDir()]) {
     const buildPath = path.join(dir, id);
     try {
       if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });

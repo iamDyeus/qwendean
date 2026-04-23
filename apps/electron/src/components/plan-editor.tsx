@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
-import { Check, Edit2, RefreshCw } from 'lucide-react'
+import { Check, Edit2, RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 
 interface Section {
   section_name: string
@@ -20,12 +20,15 @@ interface PlanEditorProps {
   isGenerating: boolean
   isDone?: boolean
   onRegenerateSection?: (section: Section) => Promise<void>
+  onRegenerateAll?: () => Promise<void>
 }
 
-export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerateSection }: PlanEditorProps) {
+export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerateSection, onRegenerateAll }: PlanEditorProps) {
   const [sections, setSections] = useState<Section[]>(plan.sections)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [regeneratingIndex, setRegeneratingIndex] = useState<number | null>(null)
+  const [sectionStatus, setSectionStatus] = useState<Record<number, 'success' | 'error'>>({})
+  const [regeneratingAll, setRegeneratingAll] = useState(false)
 
   const handlePromptChange = (index: number, newPrompt: string) => {
     const updated = [...sections]
@@ -37,10 +40,26 @@ export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerate
     if (!onRegenerateSection) return
     setRegeneratingIndex(index)
     setEditingIndex(null)
+    setSectionStatus(prev => { const s = { ...prev }; delete s[index]; return s })
     try {
       await onRegenerateSection(sections[index])
+      setSectionStatus(prev => ({ ...prev, [index]: 'success' }))
+      setTimeout(() => setSectionStatus(prev => { const s = { ...prev }; delete s[index]; return s }), 3000)
+    } catch {
+      setSectionStatus(prev => ({ ...prev, [index]: 'error' }))
     } finally {
       setRegeneratingIndex(null)
+    }
+  }
+
+  const handleRegenerateAll = async () => {
+    if (!onRegenerateAll) return
+    setRegeneratingAll(true)
+    setSectionStatus({})
+    try {
+      await onRegenerateAll()
+    } finally {
+      setRegeneratingAll(false)
     }
   }
 
@@ -49,12 +68,26 @@ export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerate
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Landing Page Plan</span>
-          {!isDone && (
-            <Button onClick={() => onApprove({ sections })} disabled={isGenerating} className="gap-2">
-              <Check className="h-4 w-4" />
-              {isGenerating ? 'Generating...' : 'Approve & Generate'}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {isDone && onRegenerateAll && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateAll}
+                disabled={regeneratingAll || regeneratingIndex !== null}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-3 w-3 ${regeneratingAll ? 'animate-spin' : ''}`} />
+                {regeneratingAll ? 'Regenerating...' : 'Regenerate All'}
+              </Button>
+            )}
+            {!isDone && (
+              <Button onClick={() => onApprove({ sections })} disabled={isGenerating} className="gap-2">
+                <Check className="h-4 w-4" />
+                {isGenerating ? 'Generating...' : 'Approve & Generate'}
+              </Button>
+            )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -65,6 +98,8 @@ export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerate
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{section.section_name}</span>
                   <span className="text-xs text-muted-foreground">({section.category})</span>
+                  {sectionStatus[index] === 'success' && <CheckCircle className="h-3 w-3 text-green-500" />}
+                  {sectionStatus[index] === 'error' && <XCircle className="h-3 w-3 text-destructive" />}
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -83,7 +118,7 @@ export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerate
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={regeneratingIndex !== null}
+                          disabled={regeneratingIndex !== null || regeneratingAll}
                           onClick={() => handleRegenerate(index)}
                         >
                           <RefreshCw className={`h-3 w-3 ${regeneratingIndex === index ? 'animate-spin' : ''}`} />
@@ -91,6 +126,9 @@ export function PlanEditor({ plan, onApprove, isGenerating, isDone, onRegenerate
                       )}
                     </div>
                   </div>
+                  {sectionStatus[index] === 'error' && (
+                    <p className="text-xs text-destructive">Regeneration failed. Try again.</p>
+                  )}
                   {editingIndex === index ? (
                     <Textarea
                       id={`prompt-${index}`}

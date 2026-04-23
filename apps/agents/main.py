@@ -208,11 +208,6 @@ async def regenerate_section(request: RegenerateSectionRequest):
             component_name=section.component_name,
             section_name=section.section_name,
             file_name=section.file_name,
-            temperature=config.generator_llm.temperature,
-            top_p=config.generator_llm.top_p,
-            top_k=config.generator_llm.top_k,
-            min_p=config.generator_llm.min_p,
-            max_tokens=config.generator_llm.max_tokens,
             semaphore=semaphore,
         )
     else:
@@ -240,6 +235,71 @@ async def regenerate_section(request: RegenerateSectionRequest):
     (components_dir / f"{section.file_name}.tsx").write_text(code, encoding="utf-8")
 
     return {"file_name": section.file_name, "component_name": name, "code": code}
+
+
+class GenerateFromPlanRequest(BaseModel):
+    project_id: str
+    plan: dict  # { sections: [...] }
+
+
+@app.post("/api/generate-from-plan")
+async def generate_from_plan(request: GenerateFromPlanRequest):
+    """Generate all components from a plan directly, bypassing the chat graph."""
+    from state import SectionPlan, SectionPromptMapping, GraphState
+    from nodes.code_generator import _generate_one_ollama, _generate_one_hf
+    from nodes.page_assembler import (
+        page_assembler_node, _strip_fences, _extract_component_name,
+        _normalize_exports, _strip_trailing_prose, _remove_hallucinated_imports,
+        _normalize_react_icons, _fix_next_image, _ensure_use_client,
+    )
+    from config import load_config
+    from pathlib import Path
+    import asyncio
+
+    config = load_config()
+    sections = [SectionPromptMapping.model_validate(s) for s in request.plan.get("sections", [])]
+    semaphore = asyncio.Semaphore(3)
+
+    if config.generator_provider == "ollama":
+        tasks = [
+            _generate_one_ollama(
+                base_url=config.ollama_base_url,
+                model=config.ollama_model,
+                section_prompt=s.prompt,
+                component_name=s.component_name,
+                section_name=s.section_name,
+                file_name=s.file_name,
+                semaphore=semaphore,
+            ) for s in sections
+        ]
+    else:
+        tasks = [
+            _generate_one_hf(
+                section_prompt=s.prompt,
+                component_name=s.component_name,
+                section_name=s.section_name,
+                file_name=s.file_name,
+                semaphore=semaphore,
+            ) for s in sections
+        ]
+
+    components = await asyncio.gather(*tasks)
+
+    # Write files using page_assembler logic
+    state: GraphState = {
+        "generated_components": list(components),
+        "section_plan": SectionPlan(sections=sections),
+        "project_id": request.project_id,
+    }
+    page_assembler_node(state)
+
+    return {
+        "preview_components": [
+            {"file_name": c.file_name, "component_name": c.component_name, "code": c.code}
+            for c in components
+        ],
+        "final_page_path": str(config.output_dir / request.project_id / "page.tsx"),
+    }
 
 
 @app.get("/api/health")

@@ -3,15 +3,68 @@ import { MakerDeb } from "@electron-forge/maker-deb";
 import { MakerRpm } from "@electron-forge/maker-rpm";
 import { MakerSquirrel } from "@electron-forge/maker-squirrel";
 import { MakerZIP } from "@electron-forge/maker-zip";
+import { AutoUnpackNativesPlugin } from "@electron-forge/plugin-auto-unpack-natives";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import { VitePlugin } from "@electron-forge/plugin-vite";
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import path from "node:path";
+import fs from "node:fs";
+
+function copyDirSync(src: string, dest: string, ignore: RegExp[] = []) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (ignore.some((r) => r.test(srcPath))) continue;
+    if (entry.isSymbolicLink()) continue; // skip symlinks
+    if (entry.isDirectory()) copyDirSync(srcPath, destPath, ignore);
+    else fs.copyFileSync(srcPath, destPath);
+  }
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    prune: true,
+    ignore: (file: string) => {
+      if (!file) return false;
+      const keep = file.startsWith("/.vite") || file.startsWith("/node_modules");
+      return !keep;
+    },
+    icon: "./images/qwendean",
+    extraResource: [
+      process.platform === "win32" ? "../agents/dist/agents.exe" : "../agents/dist/agents",
+      "resources/toolkit",
+      "resources/node.exe",
+      "images/qwendean.ico",
+    ],
   },
-  rebuildConfig: {},
+  hooks: {
+    prePackage: async () => {
+      const toolkitSrc = path.resolve(__dirname, "..", "toolkit");
+      const toolkitDest = path.resolve(__dirname, "resources", "toolkit");
+      if (fs.existsSync(toolkitDest)) {
+        try {
+          fs.rmSync(toolkitDest, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+        } catch {
+          // On Windows, .node files may be locked; continue — copyDirSync will overwrite
+        }
+      }
+      copyDirSync(toolkitSrc, toolkitDest, [
+        /[/\\]\.next([/\\]|$)/,
+        /app.builds.\[buildId\].\d+/,
+      ]);
+    },
+    postPackage: async () => {
+      // Clean up temp copy — retry on Windows EPERM (locked .node files)
+      const toolkitDest = path.resolve(__dirname, "resources", "toolkit");
+      if (fs.existsSync(toolkitDest))
+        fs.rmSync(toolkitDest, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+    },
+  },
+  rebuildConfig: {
+    extraModules: ["better-sqlite3"],
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ["darwin"]),
@@ -20,10 +73,6 @@ const config: ForgeConfig = {
   ],
   publishers: [
     {
-      /*
-       * Publish release on GitHub as draft.
-       * Remember to manually publish it on GitHub website after verifying everything is correct.
-       */
       name: "@electron-forge/publisher-github",
       config: {
         repository: {
@@ -36,6 +85,7 @@ const config: ForgeConfig = {
     },
   ],
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       build: [
         {

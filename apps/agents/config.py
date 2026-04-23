@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+_base = Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).parent
+load_dotenv(_base / ".env")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIR = PROJECT_ROOT / "apps" / "toolkit" / "builds"
+_DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "apps" / "toolkit" / "builds"
 
 
 @dataclass(frozen=True)
@@ -54,8 +56,8 @@ class AppConfig:
     ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwendean"))
 
     output_dir: Path = field(default_factory=lambda: Path(
-        os.getenv("OUTPUT_DIR", str(OUTPUT_DIR))
-    ))
+        os.getenv("OUTPUT_DIR", str(_DEFAULT_OUTPUT_DIR))
+    ).resolve())
 
 
 def load_config() -> AppConfig:

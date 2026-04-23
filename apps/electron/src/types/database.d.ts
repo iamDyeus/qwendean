@@ -24,10 +24,20 @@ export interface ElectronAPI {
   reloadPreview: () => Promise<{ success: boolean }>;
 }
 
+export interface SettingsAPI {
+  pingServers: () => Promise<{ agents: boolean; toolkit: boolean }>;
+  stopServers: () => Promise<{ success: boolean }>;
+  restartServers: () => Promise<{ success: boolean }>;
+  clearUserData: () => Promise<{ success: boolean }>;
+  listOllamaModels: () => Promise<{ models: string[]; error?: string }>;
+  clearNextCache: () => Promise<{ success: boolean }>;
+}
+
 declare global {
   interface Window {
     database: DatabaseAPI;
     electron?: ElectronAPI;
+    settings: SettingsAPI;
   }
 }
 
