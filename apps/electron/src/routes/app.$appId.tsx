@@ -10,7 +10,7 @@ export const Route = createFileRoute("/app/$appId")({
   component: AppChatPage,
 });
 
-export type GenerationStatus = "idle" | "understanding" | "waiting_approval" | "generating" | "done";
+export type GenerationStatus = "idle" | "understanding" | "waiting_approval" | "generating" | "regenerating" | "done";
 
 function AppChatPage() {
   const { appId } = Route.useParams();

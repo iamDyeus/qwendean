@@ -20,6 +20,7 @@ const STATUS_MESSAGES: Record<Exclude<GenerationStatus, "done">, string> = {
   understanding: "Understanding your requirements...",
   waiting_approval: "Waiting for your plan approval",
   generating: "Generating code...",
+  regenerating: "Regenerating section...",
 };
 
 export function PreviewWindow({ projectId, status, componentFiles }: PreviewWindowProps) {
@@ -83,7 +84,7 @@ export function PreviewWindow({ projectId, status, componentFiles }: PreviewWind
   };
 
   if (status !== "done") {
-    const isLoading = status === "understanding" || status === "generating";
+    const isLoading = status === "understanding" || status === "generating" || status === "regenerating";
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-muted gap-3">
         {isLoading && <img src={loaderGif} alt="Loading" className="size-24" />}

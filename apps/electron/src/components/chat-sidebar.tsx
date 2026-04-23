@@ -218,12 +218,22 @@ export function ChatSidebar({ projectId, projectName, onStatusChange, onPlanChan
   const handleRegenerateSection = async (section: any) => {
     try {
       await landingPageApi.regenerateSection(projectId, sessionId, section);
-      // Trigger preview reload by briefly toggling status
-      onStatusChange("generating");
-      setTimeout(() => onStatusChange("done"), 500);
+      onStatusChange("regenerating");
+      await window.settings.restartServers();
+      // Wait for toolkit to come back, then reload
+      await new Promise(r => setTimeout(r, 2000));
+      while (true) {
+        try {
+          const result = await window.settings.pingServers();
+          if (result.toolkit) break;
+        } catch {}
+        await new Promise(r => setTimeout(r, 1500));
+      }
+      onStatusChange("done");
     } catch (error) {
       console.error("Failed to regenerate section:", error);
-      throw error; // re-throw so plan-editor can show error state
+      onStatusChange("done");
+      throw error;
     }
   };
 
