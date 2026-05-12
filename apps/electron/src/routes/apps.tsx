@@ -147,7 +147,9 @@ function AppsPage() {
       setOllamaBaseUrl(saved.baseUrl);
       setPlannerModel(saved.plannerModel);
       setGeneratorModel(saved.generatorModel);
-      setOllamaNotice("Saved. Restart servers to apply changes.");
+      setOllamaNotice("Saved. Restarting servers to apply changes...");
+      await window.settings.restartServers();
+      setOllamaNotice("Saved. Servers restarted.");
     } catch (error) {
       console.error("Failed to save Ollama settings:", error);
       setOllamaError("Could not save Ollama settings.");
@@ -390,7 +392,7 @@ function AppsPage() {
                         {savingOllama ? "Saving..." : "Save Ollama Settings"}
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        Restart servers to apply.
+                        Auto-restarts servers.
                       </p>
                     </div>
                     {ollamaError && (
