@@ -51,6 +51,13 @@ function startServers() {
     env: {
       ...process.env,
       OUTPUT_DIR: path.join(app.getPath("userData"), "builds"),
+      APP_BUILDS_DIR: path.join(
+        resourcesPath,
+        "toolkit",
+        "app",
+        "builds",
+        "[buildId]",
+      ),
       PLANNER_PROVIDER: "ollama",
       GENERATOR_PROVIDER: "ollama",
       OLLAMA_BASE_URL: ollamaSettings.baseUrl,
@@ -72,9 +79,10 @@ function startServers() {
     "bin",
     "next",
   );
-  const nodeBin = process.platform === "win32"
-    ? path.join(resourcesPath, "node.exe")
-    : "node";
+  const nodeBin =
+    process.platform === "win32"
+      ? path.join(resourcesPath, "node.exe")
+      : "node";
   // Clear .next/cache so webpack doesn't serve stale broken modules
   const { rmSync, existsSync } = require("node:fs");
   const nextCache = path.join(toolkitPath, ".next", "cache");

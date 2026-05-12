@@ -14,6 +14,7 @@ load_dotenv(_base / ".env")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "apps" / "toolkit" / "builds"
+_DEFAULT_APP_BUILDS_DIR = PROJECT_ROOT / "apps" / "toolkit" / "app" / "builds" / "[buildId]"
 
 
 @dataclass(frozen=True)
@@ -57,6 +58,10 @@ class AppConfig:
 
     output_dir: Path = field(default_factory=lambda: Path(
         os.getenv("OUTPUT_DIR", str(_DEFAULT_OUTPUT_DIR))
+    ).resolve())
+
+    app_builds_dir: Path = field(default_factory=lambda: Path(
+        os.getenv("APP_BUILDS_DIR", str(_DEFAULT_APP_BUILDS_DIR))
     ).resolve())
 
 

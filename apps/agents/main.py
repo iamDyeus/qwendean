@@ -371,7 +371,7 @@ export {{ {component_name} }};
     file_path.write_text(fallback, encoding="utf-8")
 
     # Clear Next.js copy cache so it picks up the fixed file on next request
-    cached = config.output_dir.parent / "app" / "builds" / "[buildId]" / request.project_id
+    cached = config.app_builds_dir / request.project_id
     if cached.exists():
         shutil.rmtree(str(cached), ignore_errors=True)
 
