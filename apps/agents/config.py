@@ -51,7 +51,7 @@ class AppConfig:
     planner_provider: str = field(default_factory=lambda: os.getenv("PLANNER_PROVIDER", "huggingface"))
     generator_provider: str = field(default_factory=lambda: os.getenv("GENERATOR_PROVIDER", "ollama"))
     colab_generator_url: str = field(default_factory=lambda: os.getenv("COLAB_GENERATOR_URL", ""))
-    ollama_base_url: str = field(default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+    ollama_base_url: str = field(default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/"))
     ollama_planner_model: str = field(default_factory=lambda: os.getenv("OLLAMA_PLANNER_MODEL", "llama3.1:8b"))
     ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "qwendean"))
 

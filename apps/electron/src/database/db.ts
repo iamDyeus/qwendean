@@ -231,7 +231,7 @@ export function getOllamaSettings(): OllamaSettings {
 }
 
 export function saveOllamaSettings(settings: OllamaSettings): OllamaSettings {
-  setSetting("ollama.baseUrl", settings.baseUrl.trim());
+  setSetting("ollama.baseUrl", settings.baseUrl.trim().replace(/\/+$/, ""));
   setSetting("ollama.plannerModel", settings.plannerModel.trim());
   setSetting("ollama.generatorModel", settings.generatorModel.trim());
   return getOllamaSettings();
