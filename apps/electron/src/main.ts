@@ -51,6 +51,8 @@ function startServers() {
     env: {
       ...process.env,
       OUTPUT_DIR: path.join(app.getPath("userData"), "builds"),
+      PLANNER_PROVIDER: "ollama",
+      GENERATOR_PROVIDER: "ollama",
       OLLAMA_BASE_URL: ollamaSettings.baseUrl,
       OLLAMA_PLANNER_MODEL: ollamaSettings.plannerModel,
       OLLAMA_MODEL: ollamaSettings.generatorModel,
