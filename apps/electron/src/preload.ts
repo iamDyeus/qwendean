@@ -10,32 +10,42 @@ window.addEventListener("message", (event) => {
 });
 
 // Expose database API to renderer
-contextBridge.exposeInMainWorld('database', {
-  createProject: (name: string) => ipcRenderer.invoke('db:create-project', name),
-  getAllProjects: () => ipcRenderer.invoke('db:get-all-projects'),
-  getProject: (id: string) => ipcRenderer.invoke('db:get-project', id),
-  updateConversation: (id: string, conversation: string) => 
-    ipcRenderer.invoke('db:update-conversation', id, conversation),
+contextBridge.exposeInMainWorld("database", {
+  createProject: (name: string) =>
+    ipcRenderer.invoke("db:create-project", name),
+  getAllProjects: () => ipcRenderer.invoke("db:get-all-projects"),
+  getProject: (id: string) => ipcRenderer.invoke("db:get-project", id),
+  updateConversation: (id: string, conversation: string) =>
+    ipcRenderer.invoke("db:update-conversation", id, conversation),
   updateSectionPlan: (id: string, sectionPlan: string) =>
-    ipcRenderer.invoke('db:update-section-plan', id, sectionPlan),
-  deleteProject: (id: string) => ipcRenderer.invoke('db:delete-project', id),
-  resetProject: (id: string) => ipcRenderer.invoke('db:reset-project', id),
-  renameProject: (id: string, name: string) => ipcRenderer.invoke('db:rename-project', id, name),
+    ipcRenderer.invoke("db:update-section-plan", id, sectionPlan),
+  deleteProject: (id: string) => ipcRenderer.invoke("db:delete-project", id),
+  resetProject: (id: string) => ipcRenderer.invoke("db:reset-project", id),
+  renameProject: (id: string, name: string) =>
+    ipcRenderer.invoke("db:rename-project", id, name),
 });
 
 // Expose preview window API to renderer
-contextBridge.exposeInMainWorld('electron', {
-  createPreviewWindow: (projectId: string) => ipcRenderer.invoke('preview:create-window', projectId),
-  closePreviewWindow: () => ipcRenderer.invoke('preview:close-window'),
-  reloadPreview: () => ipcRenderer.invoke('preview:reload'),
+contextBridge.exposeInMainWorld("electron", {
+  createPreviewWindow: (projectId: string) =>
+    ipcRenderer.invoke("preview:create-window", projectId),
+  closePreviewWindow: () => ipcRenderer.invoke("preview:close-window"),
+  reloadPreview: () => ipcRenderer.invoke("preview:reload"),
 });
 
 // Expose settings API to renderer
-contextBridge.exposeInMainWorld('settings', {
-  pingServers: () => ipcRenderer.invoke('settings:ping-servers'),
-  stopServers: () => ipcRenderer.invoke('settings:stop-servers'),
-  restartServers: () => ipcRenderer.invoke('settings:restart-servers'),
-  clearUserData: () => ipcRenderer.invoke('settings:clear-user-data'),
-  listOllamaModels: () => ipcRenderer.invoke('settings:list-ollama-models'),
-  clearNextCache: () => ipcRenderer.invoke('settings:clear-next-cache'),
+contextBridge.exposeInMainWorld("settings", {
+  pingServers: () => ipcRenderer.invoke("settings:ping-servers"),
+  stopServers: () => ipcRenderer.invoke("settings:stop-servers"),
+  restartServers: () => ipcRenderer.invoke("settings:restart-servers"),
+  clearUserData: () => ipcRenderer.invoke("settings:clear-user-data"),
+  getOllamaSettings: () => ipcRenderer.invoke("settings:get-ollama-settings"),
+  saveOllamaSettings: (settings: {
+    baseUrl: string;
+    plannerModel: string;
+    generatorModel: string;
+  }) => ipcRenderer.invoke("settings:save-ollama-settings", settings),
+  listOllamaModels: (baseUrl?: string) =>
+    ipcRenderer.invoke("settings:list-ollama-models", baseUrl),
+  clearNextCache: () => ipcRenderer.invoke("settings:clear-next-cache"),
 });

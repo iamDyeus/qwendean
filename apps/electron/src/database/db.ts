@@ -1,8 +1,8 @@
-import Database from 'better-sqlite3';
-import { app } from 'electron';
-import path from 'path';
-import fs from 'fs';
-import { inDevelopment, PROJECT_ROOT } from '../constants';
+import Database from "better-sqlite3";
+import { app } from "electron";
+import path from "path";
+import fs from "fs";
+import { inDevelopment, PROJECT_ROOT } from "../constants";
 
 function getToolkitBuildsDir(): string {
   return inDevelopment
@@ -13,7 +13,13 @@ function getToolkitBuildsDir(): string {
 function getToolkitAppBuildsDir(): string {
   return inDevelopment
     ? path.join(PROJECT_ROOT, "apps", "toolkit", "app", "builds", "[buildId]")
-    : path.join(app.getPath("userData"), "toolkit", "app", "builds", "[buildId]");
+    : path.join(
+        app.getPath("userData"),
+        "toolkit",
+        "app",
+        "builds",
+        "[buildId]",
+      );
 }
 
 export interface Project {
@@ -25,14 +31,26 @@ export interface Project {
   updated_at: string;
 }
 
+export interface OllamaSettings {
+  baseUrl: string;
+  plannerModel: string;
+  generatorModel: string;
+}
+
+const DEFAULT_OLLAMA_SETTINGS: OllamaSettings = {
+  baseUrl: "http://localhost:11434",
+  plannerModel: "gemma4:e2b",
+  generatorModel: "qwendean-4b-GGUF:latest",
+};
+
 let db: Database.Database | null = null;
 
 export function initDatabase() {
-  const userDataPath = app.getPath('userData');
-  const dbPath = path.join(userDataPath, 'qwendean.db');
-  
+  const userDataPath = app.getPath("userData");
+  const dbPath = path.join(userDataPath, "qwendean.db");
+
   db = new Database(dbPath);
-  
+
   // Create projects table
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -44,15 +62,26 @@ export function initDatabase() {
       updated_at TEXT NOT NULL
     )
   `);
+  // Simple key-value settings store
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
   // Migrate existing DBs that don't have section_plan column
-  try { db.exec(`ALTER TABLE projects ADD COLUMN section_plan TEXT DEFAULT NULL`); } catch { /* already exists */ }
-  
+  try {
+    db.exec(`ALTER TABLE projects ADD COLUMN section_plan TEXT DEFAULT NULL`);
+  } catch {
+    /* already exists */
+  }
+
   return db;
 }
 
 export function getDatabase() {
   if (!db) {
-    throw new Error('Database not initialized. Call initDatabase() first.');
+    throw new Error("Database not initialized. Call initDatabase() first.");
   }
   return db;
 }
@@ -61,18 +90,18 @@ export function createProject(name: string): Project {
   const db = getDatabase();
   const id = Date.now().toString();
   const now = new Date().toISOString();
-  
+
   const stmt = db.prepare(`
     INSERT INTO projects (id, name, conversation, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?)
   `);
-  
-  stmt.run(id, name, '[]', now, now);
-  
+
+  stmt.run(id, name, "[]", now, now);
+
   return {
     id,
     name,
-    conversation: '[]',
+    conversation: "[]",
     section_plan: null,
     created_at: now,
     updated_at: now,
@@ -81,58 +110,80 @@ export function createProject(name: string): Project {
 
 export function getAllProjects(): Project[] {
   const db = getDatabase();
-  const stmt = db.prepare('SELECT * FROM projects ORDER BY updated_at DESC');
+  const stmt = db.prepare("SELECT * FROM projects ORDER BY updated_at DESC");
   return stmt.all() as Project[];
 }
 
 export function getProject(id: string): Project | undefined {
   const db = getDatabase();
-  const stmt = db.prepare('SELECT * FROM projects WHERE id = ?');
+  const stmt = db.prepare("SELECT * FROM projects WHERE id = ?");
   return stmt.get(id) as Project | undefined;
 }
 
-export function updateProjectConversation(id: string, conversation: string): void {
+export function updateProjectConversation(
+  id: string,
+  conversation: string,
+): void {
   const db = getDatabase();
   const now = new Date().toISOString();
-  const stmt = db.prepare(`UPDATE projects SET conversation = ?, updated_at = ? WHERE id = ?`);
+  const stmt = db.prepare(
+    `UPDATE projects SET conversation = ?, updated_at = ? WHERE id = ?`,
+  );
   stmt.run(conversation, now, id);
 }
 
-export function updateProjectSectionPlan(id: string, sectionPlan: string): void {
+export function updateProjectSectionPlan(
+  id: string,
+  sectionPlan: string,
+): void {
   const db = getDatabase();
   const now = new Date().toISOString();
-  const stmt = db.prepare(`UPDATE projects SET section_plan = ?, updated_at = ? WHERE id = ?`);
+  const stmt = db.prepare(
+    `UPDATE projects SET section_plan = ?, updated_at = ? WHERE id = ?`,
+  );
   stmt.run(sectionPlan, now, id);
 }
 
 export function resetProject(id: string): void {
   const db = getDatabase();
   const now = new Date().toISOString();
-  const stmt = db.prepare(`UPDATE projects SET conversation = '[]', updated_at = ? WHERE id = ?`);
+  const stmt = db.prepare(
+    `UPDATE projects SET conversation = '[]', updated_at = ? WHERE id = ?`,
+  );
   stmt.run(now, id);
 
   for (const dir of [getToolkitBuildsDir(), getToolkitAppBuildsDir()]) {
     const buildPath = path.join(dir, id);
     try {
-      if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+      if (fs.existsSync(buildPath))
+        fs.rmSync(buildPath, { recursive: true, force: true });
     } catch {
-      try { fs.rmSync(buildPath, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(buildPath, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
 
 export function deleteProject(id: string): void {
   const db = getDatabase();
-  const stmt = db.prepare('DELETE FROM projects WHERE id = ?');
+  const stmt = db.prepare("DELETE FROM projects WHERE id = ?");
   stmt.run(id);
 
   for (const dir of [getToolkitBuildsDir(), getToolkitAppBuildsDir()]) {
     const buildPath = path.join(dir, id);
     try {
-      if (fs.existsSync(buildPath)) fs.rmSync(buildPath, { recursive: true, force: true });
+      if (fs.existsSync(buildPath))
+        fs.rmSync(buildPath, { recursive: true, force: true });
     } catch {
       // On Windows, retry once after a short delay for locked handles
-      try { fs.rmSync(buildPath, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        fs.rmSync(buildPath, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -140,7 +191,9 @@ export function deleteProject(id: string): void {
 export function renameProject(id: string, name: string): void {
   const db = getDatabase();
   const now = new Date().toISOString();
-  const stmt = db.prepare('UPDATE projects SET name = ?, updated_at = ? WHERE id = ?');
+  const stmt = db.prepare(
+    "UPDATE projects SET name = ?, updated_at = ? WHERE id = ?",
+  );
   stmt.run(name, now, id);
 }
 
@@ -149,4 +202,37 @@ export function closeDatabase() {
     db.close();
     db = null;
   }
+}
+
+export function getSetting(key: string): string | undefined {
+  const db = getDatabase();
+  const stmt = db.prepare("SELECT value FROM settings WHERE key = ?");
+  const row = stmt.get(key) as { value: string } | undefined;
+  return row?.value;
+}
+
+export function setSetting(key: string, value: string): void {
+  const db = getDatabase();
+  const stmt = db.prepare(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+  );
+  stmt.run(key, value);
+}
+
+export function getOllamaSettings(): OllamaSettings {
+  return {
+    baseUrl: getSetting("ollama.baseUrl") ?? DEFAULT_OLLAMA_SETTINGS.baseUrl,
+    plannerModel:
+      getSetting("ollama.plannerModel") ?? DEFAULT_OLLAMA_SETTINGS.plannerModel,
+    generatorModel:
+      getSetting("ollama.generatorModel") ??
+      DEFAULT_OLLAMA_SETTINGS.generatorModel,
+  };
+}
+
+export function saveOllamaSettings(settings: OllamaSettings): OllamaSettings {
+  setSetting("ollama.baseUrl", settings.baseUrl.trim());
+  setSetting("ollama.plannerModel", settings.plannerModel.trim());
+  setSetting("ollama.generatorModel", settings.generatorModel.trim());
+  return getOllamaSettings();
 }

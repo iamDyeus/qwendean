@@ -7,7 +7,7 @@ from typing import Any
 from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langchain_ollama import ChatOllama
 
-from config import LLMConfig
+from config import LLMConfig, load_config
 
 
 def build_chat_model(config: LLMConfig, provider: str = "huggingface", **overrides: Any) -> Any:
@@ -31,8 +31,10 @@ def build_chat_model(config: LLMConfig, provider: str = "huggingface", **overrid
         if frequency_penalty is not None:
             kwargs["frequency_penalty"] = frequency_penalty
 
+        base_url = overrides.get("base_url") or load_config().ollama_base_url
+
         return ChatOllama(
-            base_url=overrides.get("base_url", "http://localhost:11434"),
+            base_url=base_url,
             model=overrides.get("model", config.model),
             temperature=temperature,
             think=False,

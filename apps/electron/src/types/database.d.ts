@@ -29,7 +29,23 @@ export interface SettingsAPI {
   stopServers: () => Promise<{ success: boolean }>;
   restartServers: () => Promise<{ success: boolean }>;
   clearUserData: () => Promise<{ success: boolean }>;
-  listOllamaModels: () => Promise<{ models: string[]; error?: string }>;
+  getOllamaSettings: () => Promise<{
+    baseUrl: string;
+    plannerModel: string;
+    generatorModel: string;
+  }>;
+  saveOllamaSettings: (settings: {
+    baseUrl: string;
+    plannerModel: string;
+    generatorModel: string;
+  }) => Promise<{
+    baseUrl: string;
+    plannerModel: string;
+    generatorModel: string;
+  }>;
+  listOllamaModels: (
+    baseUrl?: string,
+  ) => Promise<{ models: string[]; error?: string }>;
   clearNextCache: () => Promise<{ success: boolean }>;
 }
 
