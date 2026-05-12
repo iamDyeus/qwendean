@@ -72,7 +72,9 @@ function startServers() {
     "bin",
     "next",
   );
-  const nodeBin = path.join(resourcesPath, "node.exe");
+  const nodeBin = process.platform === "win32"
+    ? path.join(resourcesPath, "node.exe")
+    : "node";
   // Clear .next/cache so webpack doesn't serve stale broken modules
   const { rmSync, existsSync } = require("node:fs");
   const nextCache = path.join(toolkitPath, ".next", "cache");
