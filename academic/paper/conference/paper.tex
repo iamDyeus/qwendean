@@ -1,0 +1,217 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{listings}
+\lstset{
+  breaklines=true,
+  basicstyle=\ttfamily\footnotesize,
+  columns=fullflexible
+}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\usepackage{url}
+\begin{document}
+
+\title{Heterogeneous Agentic AI System Using Fine-Tuned SLMs}
+
+\author{\IEEEauthorblockN{Arsh}
+\IEEEauthorblockA{\textit{Dept. of Computer Science and Engg.} \\
+\textit{Graphic Era (Deemed to be University)}\\
+Dehradun, India \\ 
+https://orcid.org/0009-0006-0790-2017}
+\and
+\IEEEauthorblockN{Akshay Rajput}
+\IEEEauthorblockA{\textit{Dept. of Computer Science and Engg.} \\
+\textit{Graphic Era (Deemed to be University)}\\
+Dehradun, India \\
+https://orcid.org/0000-0001-8196-0211}
+\and
+\IEEEauthorblockN{Swarnendu Ghosh}
+\IEEEauthorblockA{\textit{AI Research Division} \\
+\textit{StartHack.IO Pvt Ltd}\\
+Dehradun, India \\
+https://orcid.org/0009-0007-0316-5782}
+}
+\maketitle
+
+\begin{abstract}
+This paper introduces a heterogeneous agentic AI architecture leveraging fine-tuned Small Language Models (SLMs) for efficient, context-aware UI component generation. Unlike general LLM approaches entailing heavy computational loads and lack of task specificity, the proposed model incorporates Gemma 4 E2B, a lightweight general-purpose SLM with 2.3B effective parameters, to tokenize user requests and transfer section-level generation tasks to Qwendean, our SLM fine-tuned from Qwen3-4B. A set of more than 900 UI components collected from ShadCN and TailwindCSS was augmented with synthetic prompt-completion data generated using DeepSeek models. After three augmentation passes, the dataset grew to over 4100 samples and was released as \texttt{iamdyeus/ui-instruct-4k} on Hugging Face. Fine-tuning used LoRA with rsLoRA at 16-bit precision. The final pipeline, orchestrated with LangGraph, produces complete React/TypeScript pages. Empirical results show better cohesion and specificity compared to homogeneous baselines, with 3-5x latency reduction.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Agentic AI, Small Language Models, Fine-Tuning, rsLoRA, UI Code Generation, LangGraph, ShadCN, TailwindCSS, Heterogeneous AI Systems
+\end{IEEEkeywords}
+
+\section{INTRODUCTION}
+
+In this study, the focus lies on the paradigm of agent-based artificial intelligence in which the agents perform complex tasks by breaking them down into simpler steps through planning and utilization of tools~\cite{ref1,ref2}. Although big orchestrators show great reasoning power, they also experience delays and high costs. On the other hand, there are some benefits to using Small Language Models (SLM) in a heterogeneous system. Some of them include less compute time, quicker inference process, and tuning ability~\cite{ref1}. The main idea of this paper based on experiments is that heterogeneous systems outperform homogeneous systems in niche applications.
+
+In our framework, the task of eliciting requirements and planning of tasks is carried out using Gemma 4 E2B (2.3B parameters), while for the purpose of generating code for the specialized UI, we use Qwendean (finetuned Qwen3-4B). The specialized model produces results which have higher domain alignment compared to the general model, while the latter efficiently handles query decomposition without the need for supercomputing power.
+
+Key contributions:
+\begin{enumerate}
+    \item Systematic, three-round pipeline for collecting, normalizing, and augmenting UI component datasets, going from 900 to 4100 high-quality training samples.
+    \item A synthetic prompt generation methodology using DeepSeek-V3 to produce diverse prompt–completion pairs, published as \texttt{iamdyeus/ui-instruct-4k}.
+    \item Qwendean: a LoRA fine-tuned Qwen3-4B fine-tuned using the rsLoRA technique, operating in 16 bits of precision, capable of producing consistent React/TypeScript/ShadCN/Tailwind UI components.
+    \item Demonstration that lightweight general-purpose models (Gemma 4 E2B) suffice for orchestration in scope-controlled agentic systems.
+    \item A LangGraph-based heterogeneous pipeline where Gemma 4 E2B breaks down page composition into section-level prompts for Qwendean.
+\end{enumerate}
+
+
+\section{RELATED WORK}
+
+\subsection{Agentic AI and Task Orchestration}
+Frameworks like LangGraph and AutoGen enable multi-agent decomposition and planning of tasks~\cite{ref3}. Key characteristics include task decomposition, memory, planning, and tool use. Current research focuses on saving resources when smaller models perform repeated tasks.~\cite{ref1}.
+
+\subsection{Small Language Models in Specialized Domains}
+Smaller models (<10B parameters) perform well in code generation, mathematical reasoning, and specialized tasks when fine-tuned~\cite{ref4}. The Qwen3-4B model balances capacity and efficiency, running on a single consumer GPU~\cite{ref5}. Specialization-based heterogeneity (general-purpose vs. domain expert) provides better efficiency than scale-based heterogeneity.
+
+\subsection{LoRA and Fine-Tuning Techniques}
+Low-Rank Adaptation (LoRA)~\cite{ref12} injects trainable low-rank matrices, drastically reducing trainable parameters. The QLoRA framework~\cite{ref13} quantizes the base model to 4 bits. The Rank-Stabilized LoRA (rsLoRA) framework~\cite{ref17} guarantees normalization with a factor of $\sqrt{r}$, for training stability at high rank values ($r\ge32$). The current work uses rsLoRA for code generation.
+
+\subsection{Synthetic Data Generation}
+Training on high-quality data is one of the major bottlenecks. State-of-the-art approaches use reasoning models to generate prompts~\cite{ref6} along with preference optimization algorithms like DPO~\cite{ref7}. The present method follows the same approach using DeepSeek-V3 with chain-of-thought prompts.
+
+\subsection{UI Component Libraries and Code Generation}
+Modular UI frameworks like ShadCN and TailwindCSS provide components that can be reused. The automation of selecting and adapting these components based on different environments (such as the domain and aesthetics) is still difficult~\cite{ref9}. Existing frameworks rely on expensive and slow monolithic LLMs or brittle heuristics. Our multi-modal framework uses the combination of planning and generation to overcome these limitations.
+
+\section{PROBLEM STATEMENT}
+
+Traditional approaches to automatic code/content creation suffer from fundamental shortcomings that make production-level interactive applications impractical. General-purpose models—whether 70B or 7B parameters—cannot specialize output to domain-specific constraints. When instructed to create a React component, there are no guarantees that the output uses ShadCN primitives, Tailwind utility classes, or project-specific guidelines.
+
+Monolithic architectures that couple orchestration (logic-based reasoning) with execution (deep syntax/library knowledge) are inefficient. Orchestration is best suited to lightweight general-purpose models, while coding requires deep knowledge of internal patterns, naming conventions, and library APIs. Coupling these forces both into the computational constraints of the latter task.
+
+General-purpose models generate outputs that depend on exact prompt wording; different phrasing leads to inconsistent styles (TypeScript interfaces vs. PropTypes vs. inline props). A fine-tuned domain specialist produces consistent style, predictable structure, and conformity to library idioms.
+
+This research mitigates these problems by separating orchestration (Gemma 4 E2B) from specialized generation (Qwendean), demonstrating that well-suited models, when correctly orchestrated, produce output quality comparable to or better than general-purpose models.
+
+\section{METHODOLOGY}
+
+\subsection{Dataset Construction: Iterative Development}
+
+There were three stages in the dataset, each triggered by the behavior shown during training.
+
+\paragraph{Round 1 (900+ components):}
+The components making up the user interfaces were scraped from ShadCN UI (an accessible library of React components based on Radix UI) and TailwindCSS (a utility-first CSS framework). The results of the scraping process included over 900 components including hero sections, feature lists, navigation menus, footers, testimonials, cards, and modal windows that retained their initial JSX code and tailwindcss classes. After processing these components through normalization (formatting, dependencies management, extraction of metadata, and filtering for quality purposes), they were used for fine-tuning our pre-trained model. As a result, overfitting occurred: the loss during the training was close to zero, while validation loss started growing after 60 iterations. In other words, the model learned by heart the provided examples but failed to generalize and generated invalid code on new prompts.
+
+\paragraph{Round 2 (2,400+ samples):}
+The overfitting issue was addressed by generating several variations of prompts for each component via DeepSeek-V3~\cite{ref6}. At first, each component’s code was described in terms of the baseline natural-language query, which was further augmented by means of chain-of-thought reasoning, considering various contexts (industry – e-commerce, healthcare, fintech, style – professional, playful, minimalist, accessibility). Such two-step augmentation made the dataset twice larger (around 2,400 prompts) and thus mitigated the problem of overfitting. Moreover, the model started showing better generalization to new prompt formulations, yet it was still prone to systematic errors: sometimes, API functions belonging to different components’ libraries got mixed up, or old Tailwind classes were used, or input data was not captured properly.
+
+\paragraph{Round 3 (4,100+ samples):}
+We augmented our source corpus by adding other open-source UI kits based on ShadCN design principles (such as Aceternity UI, Magic UI, among others). This expansion provided us with new component archetypes, better React/TypeScript coding practices, and a wider range of styles while maintaining consistency with ShadCN guidelines. Our augmented corpus was processed through the two-stage synthetic prompt creation process and resulted in an expanded data set of roughly 4,100 instances, split into training and validation sets at a ratio of 90/10, and available at \texttt{iamdyeus/ui-instruct-4k} in the Hugging Face library. With training on this corpus, we achieved significantly better performance, where generated components demonstrated proper syntax, usage of ShadCN and Tailwind conventions, and semantic compatibility with input prompts.
+
+
+\subsection{JSONL Dataset Format}
+All data used for training follow the JSON Lines (JSONL) structure, where each line corresponds to a unique training example that contains a \texttt{prompt} and a \texttt{completion} section. The \texttt{prompt}  contains a natural-language instruction on what kind of UI element the user would like to see, while the \texttt{completion} contains all the source code required to produce such an element with React/TypeScript code with JSX and TailwindCSS classes. The format is in line with conversational fine-tuning structures and is easy to parse. For example,  the following can be one of the samples: \texttt{\{"prompt": "Generate a minimalistic price card with three levels and hover effect", "completion": "<full component code>"\}}.
+
+While Qwen3 4B supports chain-of-thought via \texttt{<think>} tags, we intentionally omitted them to keep the model focused on direct code generation.
+
+% ---- Figure 2: Dataset Evolution ----
+\begin{figure}[H]  % or use [h!] if you don't want to add the float package
+\centering
+\includegraphics[width=\columnwidth]{images/image2.png}
+\caption{Dataset Evolution Pipeline}
+\label{fig:dataset}
+\end{figure}
+
+
+\subsection{Model Selection and Fine-Tuning Configuration}
+We selected Qwen3‑4B as the base SLM for fine‑tuning because of its competitive code generation benchmarks, its 4B scale (fits consumer GPUs with ~8–10 GB VRAM for FP16 inference), its Apache 2.0 license, and its native toggling of thinking mode. The model was loaded in 16‑bit (bfloat16) precision without quantization, using Unsloth’s FastLanguageModel with gradient checkpointing. Although QLoRA~\cite{ref13} would lower memory, it was not adopted due to syntax‑level artifacts that are particularly harmful in structured code generation.
+
+LoRA adapters: rank $r=32$, $\alpha=32$, dropout 0.0, targeting all attention and MLP projections (q\_proj, k\_proj, v\_proj, o\_proj, gate\_proj, up\_proj, down\_proj), with rsLoRA~\cite{ref17} enabled. rsLoRA normalizes the scaling factor by $\sqrt{r}$ instead of $r$, which is critical for stable training at ranks $\ge 32$; preliminary runs with standard LoRA at $r=16$ exhibited unstable gradient norms on long‑sequence completions.
+
+Training hyperparameters: per‑device batch size 2, gradient accumulation 8 (effective batch size 16); learning rate $1\times10^{-4}$, linear decay with 16 warmup steps; 3 epochs; maximum sequence length 4096 tokens (covers the 99\textsuperscript{th} percentile of sample lengths); packing disabled to avoid mid‑code truncation artifacts; early stopping with patience 3 evaluations. Training ran on an NVIDIA RTX 6000 PRO using PyTorch, Hugging Face Transformers, Unsloth, TRL, and bitsandbytes. After training, LoRA adapters were merged into the base model in merged\_16bit precision and pushed to Hugging Face for deployment via vLLM and Transformers.
+
+% ---- Figure 3: Training Pipeline ----
+\begin{figure}[H]
+\centering
+\includegraphics[width=\columnwidth]{images/image3.png}
+\caption{Training Pipeline}
+\label{fig:training_pipeline}
+\end{figure}
+
+\subsection{Agent Architecture System}
+We designed a heterogeneous agentic system for UI page generation, implemented with LangGraph, structured into three layers: Orchestration, Execution, and Assembly/Validation (see Fig.~\ref{fig:architecture-system}).
+
+\subsubsection{Orchestration Layer}
+Gemma 4 E2B (2.3B parameters) acts as a requirements-gathering tool. Based on the general instruction such as “Create a SaaS landing page for a fintech product catering to enterprise users,” it starts a conversation that will seek answers on the look and feel of the page, its target users, necessary sections, colors used, and accessibility needs. After getting enough information, it starts a chain-of-thought decomposition process to come up with a list of sections to be included in the design, including metadata (industry, tone direction, and colors used). Such sections can include a sticky menu with login, hero section for enterprise users, trust elements, feature grid on security, among others.
+
+\subsubsection{Execution Layer}
+The prompt for each section is generated for Qwendean, which is a specialized version of the Qwen3-4B model trained for a particular domain. The prompt for each section goes to Qwendean, and it generates code using the ShadCN UI component library along with Tailwind CSS. The fine-tuning on \texttt{ui-instruct-4k} taught Qwendean to use idiomatic APIs, follow Tailwind practices, and be accessible.
+
+\subsubsection{Assembly and Validation Layer}
+The purpose of the Synthesizer Node is to provide output aggregation, solve the issue of duplicate imports, ensure consistency of the property types, and lastly, make the final adjustments through the layout wrapper. A process is adopted whereby rubrics are used to check the syntax, use of ShadCN components, proper use of Tailwind classes, and vibes altogether.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=\textwidth]{images/image4.png}
+\caption{Detailed Agentic Architecture Flow}
+\label{fig:architecture-system}
+\end{figure*}
+
+\section{RESULTS AND DISCUSSION}
+
+\subsection{Training Dynamics Across Iterations}
+From the tripartite evaluation, it can be deduced that the diversity of datasets holds more weight than the sample size alone. In the case of Round 1, which used a dataset of 900 samples, classic signs of overfitting appeared in which the training loss tended to zero while the validation loss began increasing around the 60th step, thereby producing inconsistent output responses to new prompts. In Round 2, where a larger sample size of 2,400 was reached by means of prompt augmentation, overfitting was delayed but remained evident from the qualitative analysis, where systematic errors such as the wrong merging of ShadCN parts and incorrect identification of Tailwind versions could still be seen along with outputs that did not correlate well with specific prompts. In Round 3, where 4,100 samples were obtained using a multi-library approach, consistent decline in validation loss occurred across the three epochs with late activation of early stopping, thus proving that learning continued to occur before the end of training.
+
+\subsection{Model Configuration Insights}
+rsLoRA at a rank of around $32$ became very important. Initial tests using the normal LoRA technique with a rank of $16$ yielded unstable gradient norms while completing code using long sequences. Moving to rsLoRA and setting the value of $\alpha = 32$ helped stabilize training and produce a lower validation loss value after training. Using $16$-bit full precision for training, even though we used $24$--$32$~GB of VRAM on an A100-class GPU, avoided the syntax-level artifacts brought about by the use of $4$-bit QLoRA. The maximum sequence length of $4096$ tokens accommodated the $99^{\text{th}}$ percentile of the sample length, and packing was turned off deliberately to avoid presenting the model with artificially truncated code sequences.
+
+\subsection{Agentic System Performance}
+An end-to-end assessment revealed distinct advantages of this design over homogeneous designs where the cloud LLM was responsible for both decomposition and generation. The main findings include the following:
+\begin{itemize}
+    \item Output Consistency: Qwendean output sections had more consistent use of Shadcn components and naming, as well as tailwind classes, compared to the sections produced by GPT-4o, which depended on the phrasing used in the prompts.
+    \item Latency and Cost: Local section generation from the RTX 4060 Laptop GPU took 3-5 seconds per section, while the use of the GPT-4o API for generating a section took 8-16 seconds per section, meaning that there was a 3-5x lower latency rate for a page with six sections generated locally. API costs are almost zero aside from infrastructure costs.
+    \item Orchestration Quality: The Gemma 4 E2B system consistently provided lists of sections with proper metadata included. Decomposition results were also consistent and properly scoped after clarification.
+\end{itemize}
+
+\subsection{Orchestration  
+with Lightweight General-Purpose Models}
+The orchestration approach that uses the 2B version of Gemma 4 shows that there is no significant computing expense with regard to requirements elicitation and structured task decomposition in a well-bounded problem space. Such tasks require logical reasoning, generation of context-based queries, and creation of metadata, which smaller generalist models can perform if properly guided. It appears that having a 2B generalist model working with a 4B specialist provides better results than homogeneous approaches of any size.
+
+\subsection{Limitations}
+Evaluations, however, tend to be mostly qualitative, although pass@k measurements and preference studies among people are considered potential directions for future evaluations. The 4,100 sample database may have been adequate for creating a proof-of-concept prototype but not for ensuring that all elements of the user interfaces have been covered. Currently, large language models (LLMs) are used in validation, while compiler and AST checks will follow.
+
+\section{FUTURE WORK}
+
+The first priority is to increase the training data size to somewhere between 30,000-40,000 high-quality examples. While the present evidence suggests that diversity beats sheer quantity, more data may help reduce the occurrence of systemic bugs. The following sources have been considered: new open-source component libraries, developer intent prompts from the community, and adversarial inputs.
+
+Secondly, we plan to make Qwendean accessible via a Model Context Protocol (MCP) server. Thus, any MCP-compatible client (like Claude, GPT-4o, and Gemini) will be able to call Qwendean on-the-fly for generating UIs for their custom domains without having to set up their specific agentic pipeline. This way we get closer to fine-tuned agents in a generic LLM environment.
+
+We will improve our verification with the help of non-LLM layers. Namely, AST-level code analysis and TypeScript type-checking (\texttt{tsc}) prior to assembling UIs will be used alongside with an LLM-based reflection layer analyzing the assembled output and suggesting changes for regeneration.
+
+With the scaling of the dataset, Direct Preference Optimization (DPO)~\cite{ref7} using preferences from humans (readability, reusability, and accessibility) would bring the outputs of Qwendean closer to what developers expect in the real world. Afterward, the hybrid system will be evaluated in nearby domains (API integration codes, database schema design, and test case creation), where the generalization principle of orchestration along with specialized generation can be applied.
+
+\section{CONCLUSION}
+
+This paper shows how a heterogeneous agent architecture using an SLM for orchestration, together with a domain-specific tuned generator, beats monolithic approaches to UI code generation in a constrained setting. In particular, the requirements are elicited by Gemma 4 E2B , and generation is done by Qwendean (fine-tuned Qwen3-4B). The benefits are threefold: the architecture is 3-5× faster, it does not incur per-call API costs, and, most importantly, generates code more reliably than prompt-engineered frontier models.
+
+The iterative dataset development (900 → 2,400 → 4,100 samples) and the corresponding training dynamics offer practical insights for SLM fine‑tuning in code domains. The core message is that functional specialization, not model scale, drives efficiency in agentic systems. As the community moves toward tool‑assisted, multi‑agent workflows, fine‑tuned SLMs will become essential building blocks for production‑level AI.
+
+\begin{thebibliography}{99}
+\bibitem{ref1} P. Belcak and R. Wattenhofer, ``Small Language Models are the Future of Agentic AI,'' \textit{arXiv preprint arXiv:2506.02153}, Jun. 2025.
+\bibitem{ref2} J. Wei, X. Wang, D. Schuurmans, et al., ``Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,'' in \textit{Proc. NeurIPS}, Lake Tahoe, NV, USA, Dec. 2022, pp. 1–21.
+\bibitem{ref3} LangChain, ``LangGraph: Multi-Agent Orchestration,'' [Online]. Available: https://python.langchain.com/docs/langgraph/. Accessed: Nov. 2025.
+\bibitem{ref4} T. Pöppel, M. Eisenschlos, J. Nijkamp, et al., ``On the Transfer Learning Capabilities of Code Models,'' \textit{arXiv preprint arXiv:2409.15895}, Sep. 2024.
+\bibitem{ref5} Qwen Team, ``Qwen3 Technical Report,'' \textit{arXiv preprint arXiv:2505.09388}, May 2025.
+\bibitem{ref6} DeepSeek-AI, ``DeepSeek-V3 Technical Report,'' \textit{arXiv preprint arXiv:2412.19437}, Dec. 2024.
+\bibitem{ref7} R. Rafailov, S. Sharma, H. Zhang, et al., ``Direct Preference Optimization: Your Language Model is Secretly a Reward Model,'' \textit{arXiv preprint arXiv:2305.18290}, May 2023.
+\bibitem{ref8} S. Wang, Y. Jiang, H. Xu, Z. Liu, C. C. Elkan, and S. Jain, ``Want To Reduce Labeling Cost for Your Dataset: Read This,'' in \textit{Proc. NeurIPS Datasets and Benchmarks Track}, 2021, pp. 1–15.
+\bibitem{ref9} D. D. Ruiz, D. D. García, and J. J. Gómez, ``Automating Web UI Design: Current Approaches and Future Challenges,'' \textit{IEEE Trans. Softw. Eng.}, vol. 49, no. 6, pp. 3150–3170, Jun. 2023.
+\bibitem{ref10} ShadCN UI Documentation. [Online]. Available: https://ui.shadcn.com/docs. Accessed: Nov. 2025.
+\bibitem{ref11} TailwindCSS Documentation. [Online]. Available: https://tailwindcss.com. Accessed: Nov. 2025.
+\bibitem{ref12} E. J. Hu, Y. Shen, P. Wallis, et al., ``LoRA: Low-Rank Adaptation of Large Language Models,'' \textit{arXiv preprint arXiv:2106.09685}, Jun. 2021.
+\bibitem{ref13} T. Dettmers, A. Pagnoni, A. Holtzman, and L. Zettlemoyer, ``QLoRA: Efficient Finetuning of Quantized LLMs,'' \textit{arXiv preprint arXiv:2305.14314}, May 2023.
+\bibitem{ref14} Unsloth, ``Unsloth: Optimized LLM Fine-Tuning,'' [Online]. Available: https://github.com/unslothai/unsloth. Accessed: Nov. 2025.
+\bibitem{ref15} Hugging Face, ``Transformers Library,'' [Online]. Available: https://huggingface.co/docs/transformers. Accessed: Nov. 2025.
+\bibitem{ref16} PyTorch Foundation, ``PyTorch Documentation,'' [Online]. Available: https://pytorch.org. Accessed: 2025.
+\bibitem{ref17} D. Kalajdzievski, ``A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA,'' \textit{arXiv preprint arXiv:2312.03732}, Nov. 2023.
+\end{thebibliography}
+
+\end{document}
