@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -214,3 +213,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+# Toolkit build outputs: allow only page.tsx and error.tsx in the [buildId] folder
+/apps/toolkit/app/builds/**
+!/apps/toolkit/app/builds/[buildId]/
+/apps/toolkit/app/builds/[buildId]/**
+!/apps/toolkit/app/builds/[buildId]/page.tsx
+!/apps/toolkit/app/builds/[buildId]/error.tsx
