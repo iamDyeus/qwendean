@@ -20,6 +20,7 @@ import { registerPreviewHandlers } from "./ipc/preview/handlers";
 
 log.initialize();
 log.transports.file.level = "debug";
+log.transports.console.level = false; // disable console transport to avoid EPIPE when no terminal
 Object.assign(console, log.functions);
 
 if (squirrelStartup) {
@@ -42,12 +43,11 @@ function startServers() {
   const resourcesPath = process.resourcesPath;
   const ollamaSettings = getOllamaSettings();
 
-  // Start FastAPI agents (PyInstaller binary)
-  const agentsBin = path.join(
-    resourcesPath,
-    process.platform === "win32" ? "agents.exe" : "agents",
-  );
-  agentsProcess = spawn(agentsBin, [], {
+  // Start FastAPI agents via bundled venv
+  const agentsDir = path.join(resourcesPath, "agents");
+  const pythonBin = path.join(agentsDir, "venv", "bin", "python");
+  agentsProcess = spawn(pythonBin, ["-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"], {
+    cwd: agentsDir,
     env: {
       ...process.env,
       OUTPUT_DIR: path.join(app.getPath("userData"), "builds"),
@@ -67,6 +67,9 @@ function startServers() {
   });
   agentsProcess.stderr?.on("data", (d) =>
     console.error("[agents]", d.toString()),
+  );
+  agentsProcess.stdout?.on("data", (d) =>
+    console.log("[agents]", d.toString()),
   );
 
   // Start Next.js toolkit dev server
@@ -97,7 +100,7 @@ function startServers() {
       env: {
         ...process.env,
         BUILDS_DIR: path.join(app.getPath("userData"), "builds"),
-        APP_BUILDS_DIR: path.join(toolkitPath, "app", "builds", "[buildId]"),
+        APP_BUILDS_DIR: path.join(app.getPath("userData"), "app-builds", "[buildId]"),
       },
     },
   );
@@ -331,17 +334,8 @@ ipcMain.handle("settings:clear-user-data", async () => {
 
   // Clear toolkit copied build dirs
   const toolkitBuildsDir = inDevelopment
-    ? path.resolve(
-        __dirname,
-        "..",
-        "..",
-        "..",
-        "toolkit",
-        "app",
-        "builds",
-        "[buildId]",
-      )
-    : path.join(process.resourcesPath, "toolkit", "app", "builds", "[buildId]");
+    ? path.resolve(__dirname, "..", "..", "..", "toolkit", "app", "builds", "[buildId]")
+    : path.join(app.getPath("userData"), "app-builds", "[buildId]");
   if (existsSync(toolkitBuildsDir)) {
     for (const entry of readdirSync(toolkitBuildsDir)) {
       if (/^\d+$/.test(entry))

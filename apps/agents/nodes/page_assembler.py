@@ -99,21 +99,70 @@ def _fix_next_image(code: str) -> str:
 
 
 def _remove_hallucinated_imports(code: str) -> str:
+    # Known shadcn component name corrections (wrong -> correct)
+    _ui_name_fixes = {
+        "aspect": "aspect-ratio",
+        "accordion": "accordion",
+        "alert-dialog": "alert-dialog",
+        "avatar": "avatar",
+        "badge": "badge",
+        "breadcrumb": "breadcrumb",
+        "button": "button",
+        "calendar": "calendar",
+        "card": "card",
+        "carousel": "carousel",
+        "checkbox": "checkbox",
+        "collapsible": "collapsible",
+        "command": "command",
+        "context-menu": "context-menu",
+        "dialog": "dialog",
+        "drawer": "drawer",
+        "dropdown-menu": "dropdown-menu",
+        "form": "form",
+        "hover-card": "hover-card",
+        "input": "input",
+        "input-otp": "input-otp",
+        "label": "label",
+        "menubar": "menubar",
+        "navigation-menu": "navigation-menu",
+        "pagination": "pagination",
+        "popover": "popover",
+        "progress": "progress",
+        "radio-group": "radio-group",
+        "resizable": "resizable",
+        "scroll-area": "scroll-area",
+        "select": "select",
+        "separator": "separator",
+        "sheet": "sheet",
+        "sidebar": "sidebar",
+        "skeleton": "skeleton",
+        "slider": "slider",
+        "sonner": "sonner",
+        "switch": "switch",
+        "table": "table",
+        "tabs": "tabs",
+        "textarea": "textarea",
+        "toast": "toast",
+        "toaster": "toaster",
+        "toggle": "toggle",
+        "toggle-group": "toggle-group",
+        "tooltip": "tooltip",
+    }
     lines = code.splitlines()
     cleaned = []
     for line in lines:
         # Fix hallucinated lucide-react package names
         if re.search(r'from\s+["\'][^"\']*lucide[^"\']*["\']', line) and 'lucide-react' not in line:
             line = re.sub(r'from\s+["\'][^"\']*lucide[^"\']*["\']', 'from "lucide-react"', line)
-        # Remove bad @/ imports
-        m = re.match(r'^import\s+.*\s+from\s+["\'](@/[^"\']+)["\']', line)
+        # Fix/remove bad @/ imports
+        m = re.match(r'^(import\s+.*\s+from\s+["\'])(@/[^"\']+)(["\'])', line)
         if m:
-            path = m.group(1)
-            if not (
-                path.startswith("@/components/ui/")
-                or path == "@/lib/utils"
-                or path.startswith("@/hooks/")
-            ):
+            path = m.group(2)
+            if path.startswith("@/components/ui/"):
+                component = path[len("@/components/ui/"):]
+                corrected = _ui_name_fixes.get(component, component)
+                line = m.group(1) + "@/components/ui/" + corrected + m.group(3)
+            elif not (path == "@/lib/utils" or path.startswith("@/hooks/")):
                 continue
         cleaned.append(line)
     return "\n".join(cleaned)

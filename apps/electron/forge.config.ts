@@ -16,7 +16,16 @@ function copyDirSync(src: string, dest: string, ignore: RegExp[] = []) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (ignore.some((r) => r.test(srcPath))) continue;
-    if (entry.isSymbolicLink()) continue; // skip symlinks
+    if (entry.isSymbolicLink()) {
+      // Resolve symlink and copy the real file/dir
+      try {
+        const real = fs.realpathSync(srcPath);
+        const stat = fs.statSync(real);
+        if (stat.isDirectory()) copyDirSync(real, destPath, ignore);
+        else fs.copyFileSync(real, destPath);
+      } catch { /* broken symlink — skip */ }
+      continue;
+    }
     if (entry.isDirectory()) copyDirSync(srcPath, destPath, ignore);
     else fs.copyFileSync(srcPath, destPath);
   }
@@ -33,7 +42,6 @@ const config: ForgeConfig = {
     },
     icon: "./images/qwendean",
     extraResource: [
-      process.platform === "win32" ? "../agents/dist/agents.exe" : "../agents/dist/agents",
       "resources/toolkit",
       "resources/node.exe",
       "images/qwendean.ico",
@@ -41,6 +49,7 @@ const config: ForgeConfig = {
   },
   hooks: {
     prePackage: async () => {
+      // Copy toolkit
       const toolkitSrc = path.resolve(__dirname, "..", "toolkit");
       const toolkitDest = path.resolve(__dirname, "resources", "toolkit");
       if (fs.existsSync(toolkitDest)) {
@@ -55,11 +64,23 @@ const config: ForgeConfig = {
         /app.builds.\[buildId\].\d+/,
       ]);
     },
-    postPackage: async () => {
-      // Clean up temp copy — retry on Windows EPERM (locked .node files)
+    postPackage: async (_config, buildPath) => {
       const toolkitDest = path.resolve(__dirname, "resources", "toolkit");
       if (fs.existsSync(toolkitDest))
         fs.rmSync(toolkitDest, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
+
+      // Copy agents directly into packaged output, renaming .venv -> venv to avoid Forge dotfolder stripping
+      const agentsSrc = path.resolve(__dirname, "..", "agents");
+      const agentsDest = path.join(buildPath.outputPaths[0], "resources", "agents");
+      copyDirSync(agentsSrc, agentsDest, [
+        /[/\\]__pycache__([/\\]|$)/,
+        /[/\\]build([/\\]|$)/,
+        /[/\\]dist([/\\]|$)/,
+      ]);
+      // Rename .venv -> venv so it survives zip extraction
+      const dotVenv = path.join(agentsDest, ".venv");
+      const venv = path.join(agentsDest, "venv");
+      if (fs.existsSync(dotVenv)) fs.renameSync(dotVenv, venv);
     },
   },
   rebuildConfig: {
