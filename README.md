@@ -45,7 +45,7 @@ If you use this work, please cite:
 ```bibtex
 @misc{qwendean2026,
   title={Heterogeneous Agentic AI System Using Fine-Tuned SLMs},
-  author={Arsh, Akshay Rajput, Swarnendu Ghosh},
+  author={Arsh, Swarnendu Ghosh},
   year={2026},
   note={Available at \url{https://github.com/iamDyeus/qwendean}}
 }
